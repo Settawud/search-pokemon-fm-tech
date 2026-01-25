@@ -75,7 +75,7 @@ function SearchPageContent() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col min-h-screen">
         {/* Header - Fixed Feel */}
         <header className="sticky top-0 z-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
           <div className="max-w-6xl mx-auto px-6 py-6">
@@ -112,7 +112,7 @@ function SearchPageContent() {
               <SearchInput
                 value={searchTerm}
                 onChange={setSearchTerm}
-                placeholder="Search Pokémon by name..."
+                placeholder="Search by name..."
               />
 
               {/* Results Count */}
@@ -193,8 +193,19 @@ function SearchPageContent() {
         </main>
 
         {/* Footer */}
-        <footer className="py-8 text-center text-slate-500 text-sm border-t border-white/5">
-          <p>Dev by Bbest</p>
+        <footer className="py-8 mt-auto border-t border-white/5 bg-slate-950/50 backdrop-blur-sm">
+          <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-center items-center gap-4">
+
+            {/* Left: Copyright & Name */}
+            <div className="text-slate-400 text-sm">
+              <p>
+                © 2026 Developed by{" "}
+                <span className="font-semibold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  Bbest
+                </span>
+              </p>
+            </div>
+          </div>
         </footer>
       </div>
     </motion.div>

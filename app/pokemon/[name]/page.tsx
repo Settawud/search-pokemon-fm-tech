@@ -399,7 +399,7 @@ export default function PokemonDetail() {
 
                                 {/* Evolution Chain */}
                                 <AnimatePresence>
-                                    {pokemon.evolutions && pokemon.evolutions.length > 0 && (
+                                    {pokemon.evolutions && pokemon.evolutions.filter(evo => evo.name.toLowerCase() !== pokemon.name.toLowerCase()).length > 0 && (
                                         <motion.div
                                             variants={itemVariants}
                                             className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
@@ -414,7 +414,7 @@ export default function PokemonDetail() {
                                                 </p>
                                             )}
                                             <div className="flex items-center justify-center gap-4 flex-wrap">
-                                                {pokemon.evolutions.map((evo, index) => (
+                                                {pokemon.evolutions.filter(evo => evo.name.toLowerCase() !== pokemon.name.toLowerCase()).map((evo, index) => (
                                                     <div key={evo.id} className="flex items-center gap-4">
                                                         {index > 0 && (
                                                             <ArrowRight className="w-6 h-6 text-slate-500" />
