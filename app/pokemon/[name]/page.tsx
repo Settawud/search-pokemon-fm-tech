@@ -4,8 +4,9 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@apollo/client/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { GET_POKEMON } from "../../lib/queries";
-import { getTypeStyle, cn } from "../../lib/utils";
+import { getTypeStyle, cn, getPokemonImage } from "../../lib/utils";
 import { PokemonDetailSkeleton } from "../../components/Skeleton";
 import {
     ChevronLeft,
@@ -38,6 +39,7 @@ interface Evolution {
     id: string;
     name: string;
     image: string;
+    number: string;
 }
 
 interface EvolutionRequirement {
@@ -227,10 +229,13 @@ export default function PokemonDetail() {
                                         transition={{ duration: 0.3 }}
                                     >
                                         <div className={`absolute inset-0 ${primaryColor.solid} opacity-20 blur-3xl rounded-full`} />
-                                        <img
-                                            src={pokemon.image}
+                                        <Image
+                                            src={getPokemonImage(pokemon.number)}
                                             alt={pokemon.name}
-                                            className="w-56 h-56 mx-auto relative drop-shadow-2xl"
+                                            width={224}
+                                            height={224}
+                                            className="w-56 h-56 mx-auto relative drop-shadow-2xl object-contain"
+                                            priority
                                         />
                                     </motion.div>
 
@@ -427,7 +432,7 @@ export default function PokemonDetail() {
                                                                 className="w-20 h-20 bg-slate-800/50 border border-white/10 rounded-xl p-2 group-hover:border-blue-500/50 group-hover:bg-slate-800 transition-all"
                                                                 whileHover={{ scale: 1.1 }}
                                                             >
-                                                                <img src={evo.image} alt={evo.name} className="w-full h-full object-contain" />
+                                                                <Image src={getPokemonImage(evo.number)} alt={evo.name} width={80} height={80} className="w-full h-full object-contain" />
                                                             </motion.div>
                                                             <p className="text-slate-300 text-sm mt-2 capitalize group-hover:text-blue-400 transition-colors">
                                                                 {evo.name}

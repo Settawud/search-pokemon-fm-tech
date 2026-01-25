@@ -18,6 +18,7 @@ interface Pokemon {
   name: string;
   image: string;
   types: string[];
+  number: string;
 }
 
 // กำหนด Type สำหรับ Query Response
@@ -107,7 +108,7 @@ function SearchPageContent() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="max-w-2xl mx-auto"
+              className="max-w-md mx-auto"
             >
               <SearchInput
                 value={searchTerm}
@@ -180,11 +181,11 @@ function SearchPageContent() {
                 {filteredPokemons.map((pokemon: Pokemon, index: number) => (
                   <PokemonCard
                     key={pokemon.id}
-                    id={pokemon.id}
                     name={pokemon.name}
                     image={pokemon.image}
                     types={pokemon.types}
                     index={index}
+                    number={pokemon.number}
                   />
                 ))}
               </div>

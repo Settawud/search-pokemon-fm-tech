@@ -31,3 +31,9 @@ export const typeColors: Record<string, { bg: string; text: string; solid: strin
 export function getTypeStyle(type: string) {
     return typeColors[type] || { bg: "bg-slate-500/15", text: "text-slate-400", solid: "bg-slate-500", border: "border-slate-500/30" };
 }
+
+export function getPokemonImage(number: string): string {
+    // Convert "001" to 1 by parsing int
+    const id = parseInt(number, 10);
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+}

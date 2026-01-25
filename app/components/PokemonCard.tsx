@@ -2,14 +2,14 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { getTypeStyle } from "../lib/utils";
+import { getTypeStyle, getPokemonImage } from "../lib/utils";
 
 interface PokemonCardProps {
-    id: string;
     name: string;
     image: string;
     types: string[];
     index: number;
+    number: string;
 }
 
 // Animation variants
@@ -39,9 +39,10 @@ const cardVariants = {
     }
 };
 
-export function PokemonCard({ id, name, image, types, index }: PokemonCardProps) {
+export function PokemonCard({ name, image, types, index, number }: PokemonCardProps) {
     const primaryType = types[0];
     const primaryColor = getTypeStyle(primaryType);
+    const imageUrl = number ? getPokemonImage(number) : image;
 
     return (
         <motion.div
@@ -61,9 +62,9 @@ export function PokemonCard({ id, name, image, types, index }: PokemonCardProps)
                     {/* Pokemon Image */}
                     <div className="relative mb-3">
                         <motion.img
-                            src={image}
+                            src={imageUrl}
                             alt={name}
-                            className="w-24 h-24 mx-auto drop-shadow-lg"
+                            className="w-24 h-24 mx-auto drop-shadow-lg object-contain"
                             whileHover={{ scale: 1.1, rotate: 5 }}
                             transition={{ duration: 0.2 }}
                         />

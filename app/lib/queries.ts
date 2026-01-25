@@ -5,10 +5,10 @@ export const GET_POKEMONS = gql`
     query GetPokemons {
         pokemons(first:151) {
             id
+            number
             name
             image
             types
-
         }
     }    
 `;
@@ -37,6 +37,7 @@ export const GET_POKEMON = gql`
             }
             evolutions {
                 id
+                number
                 name
                 image
             }
