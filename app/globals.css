@@ -51,6 +51,10 @@
 }
 
 /* Global Styles */
+html {
+  background: #020617;
+}
+
 body {
   background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
   color: var(--foreground);

@@ -88,13 +88,13 @@ const itemVariants = {
 };
 
 // Stat Card Component
-function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ElementType }) {
+function StatCard({ label, value, icon: Icon, colorClass = "text-slate-400" }: { label: string; value: string | number; icon: React.ElementType; colorClass?: string }) {
     return (
         <motion.div
             variants={itemVariants}
             className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-4 text-center hover:border-white/20 transition-colors"
         >
-            <Icon className="w-6 h-6 mx-auto mb-2 text-slate-400" />
+            <Icon className={`w-6 h-6 mx-auto mb-2 ${colorClass}`} />
             <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">{label}</p>
             <p className="text-white font-semibold">{value}</p>
         </motion.div>
