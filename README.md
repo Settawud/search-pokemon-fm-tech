@@ -1,36 +1,94 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Search Pokemon FM Tech
 
-## Getting Started
+A modern, high-performance Pokémon Search application built with Next.js 16, GraphQL, and Tailwind CSS. Explore the complete desktop and mobile-friendly Pokédex with detailed stats, combat information, and evolution chains.
 
-First, run the development server:
+![React](https://img.shields.io/badge/React-19-blue)
+![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC)
+![Apollo Client](https://img.shields.io/badge/Apollo_Client-GraphQL-purple)
+
+## 🚀 Features
+
+- **Real-time Search**: Instantly find Pokémon by name with optimized debounced search.
+- **Detailed Stats**: View comprehensive statistics including Max CP, Max HP, Weight, Height, and Flee Rate.
+- **Combat Intel**: tailored information on:
+  - Fast & Special Attacks with damage meters.
+  - Type Weaknesses & Resistances.
+- **Evolution Chains**: Visual navigation through Pokémon evolution paths.
+- **Modern UI/UX**:
+  - Immersive dark mode with mesh gradients.
+  - Smooth page transitions and micro-interactions using **Framer Motion**.
+  - Responsive design for all devices.
+  - Skeleton loading states for improved perceived performance.
+
+## 🛠 Tech Stack
+
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Data Fetching**: [Apollo Client](https://www.apollographql.com/docs/react/) (GraphQL)
+- **Animations**: [Framer Motion](https://www.framer.com/motion/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Utility**: [clsx](https://github.com/lukeed/clsx) & [tailwind-merge](https://github.com/dcastil/tailwind-merge)
+- **Testing**: [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/)
+
+## 📦 Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/search-pokemon-fm-tech.git
+   cd search-pokemon-fm-tech
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   # or
+   pnpm install
+   ```
+
+3. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## 🧪 Running Tests
+
+This project uses Jest for unit testing.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📂 Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+├── app/                  # App Router directories
+│   ├── components/       # Reusable UI components
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utilities & Apollo Client setup
+│   ├── pokemon/[name]/   # Dynamic Pokemon details page
+│   └── page.tsx          # Main search page
+├── __tests__/            # Jest test files
+├── public/               # Static assets
+└── ...config files       # Next.js, Tailwind, Jest configs
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🤝 Contributing
 
-## Learn More
+Contributions, issues, and feature requests are welcome!
 
-To learn more about Next.js, take a look at the following resources:
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📄 License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Distributed under the MIT License. See `LICENSE` for more information.
