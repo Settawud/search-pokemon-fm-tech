@@ -1,9 +1,16 @@
 "use client"; // บอกว่าเป็น client component
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@apollo/client/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { GET_POKEMONS } from "./lib/queries";
-import Link from "next/link";
+import { useDebounce } from "./hooks/useDebounce";
+import { PokemonCard } from "./components/PokemonCard";
+import { SearchInput } from "./components/SearchInput";
+import { PokemonGridSkeleton } from "./components/Skeleton";
+import { SearchX } from "lucide-react";
+import { Pokeball } from "./components/Pokeball";
 
 // กำหนด Type ข้อมูล Pokemon
 interface Pokemon {
@@ -18,186 +25,178 @@ interface GetPokemonsData {
   pokemons: Pokemon[];
 }
 
-// Type color mapping
-const typeColors: Record<string, { bg: string; text: string }> = {
-  Grass: { bg: "bg-emerald-500/15", text: "text-emerald-400" },
-  Poison: { bg: "bg-purple-500/15", text: "text-purple-400" },
-  Fire: { bg: "bg-red-500/15", text: "text-red-400" },
-  Water: { bg: "bg-blue-500/15", text: "text-blue-400" },
-  Electric: { bg: "bg-yellow-500/15", text: "text-yellow-400" },
-  Psychic: { bg: "bg-pink-500/15", text: "text-pink-400" },
-  Ice: { bg: "bg-cyan-500/15", text: "text-cyan-400" },
-  Dragon: { bg: "bg-violet-500/15", text: "text-violet-400" },
-  Dark: { bg: "bg-slate-500/15", text: "text-slate-400" },
-  Fairy: { bg: "bg-pink-400/15", text: "text-pink-300" },
-  Fighting: { bg: "bg-orange-500/15", text: "text-orange-400" },
-  Flying: { bg: "bg-indigo-400/15", text: "text-indigo-300" },
-  Ground: { bg: "bg-amber-600/15", text: "text-amber-500" },
-  Rock: { bg: "bg-stone-500/15", text: "text-stone-400" },
-  Bug: { bg: "bg-lime-500/15", text: "text-lime-400" },
-  Ghost: { bg: "bg-violet-600/15", text: "text-violet-400" },
-  Steel: { bg: "bg-slate-400/15", text: "text-slate-300" },
-  Normal: { bg: "bg-gray-500/15", text: "text-gray-400" },
-};
-
-const getTypeStyle = (type: string) => {
-  return typeColors[type] || { bg: "bg-slate-500/15", text: "text-slate-400" };
+// Page transition variants
+const pageVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.3 } },
+  exit: { opacity: 0, transition: { duration: 0.2 } }
 };
 
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [searchTerm, setSearchTerm] = useState("");
+  // Initialize search term from URL
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("name") || "");
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   // ใช้ useQuery hook ดึงข้อมูล pokemon พร้อมกำหนด Type
   const { loading, error, data } = useQuery<GetPokemonsData>(GET_POKEMONS);
 
+  // Sync search term with URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) {
+      params.set("name", debouncedSearch);
+      router.replace(`?${params.toString()}`, { scroll: false });
+    } else {
+      router.replace("/", { scroll: false });
+    }
+  }, [debouncedSearch, router]);
+
   // กรอง Pokemon ตามคำที่ค้นหา
   const filteredPokemons = data?.pokemons?.filter((pokemon: Pokemon) =>
-    pokemon.name.toLowerCase().includes(searchTerm.toLowerCase())
+    pokemon.name.toLowerCase().includes(debouncedSearch.toLowerCase())
   ) || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900">
-      {/* Header */}
-      <header className="pt-12 pb-8 px-6">
-        <div className="max-w-6xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-            Pokémon Database
-          </h1>
-          <p className="text-slate-400 text-lg">
-            Explore the complete Pokédex with detailed stats and information
-          </p>
-        </div>
-      </header>
-
-      {/* Search Section */}
-      <div className="px-6 pb-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="relative">
-            {/* Search Icon */}
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <svg
-                className="h-5 w-5 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Search Pokémon by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-800/50 border border-slate-700/50 text-white placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all duration-200 text-lg"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-white transition-colors"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-          {/* Search Results Count */}
-          {searchTerm && (
-            <p className="text-slate-400 text-sm mt-3 text-center">
-              Found <span className="text-blue-400 font-medium">{filteredPokemons.length}</span> Pokémon matching "{searchTerm}"
-            </p>
-          )}
-        </div>
+    <motion.div
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950"
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
+      {/* Mesh Gradient Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
-          <p className="text-slate-400 mt-4">Loading Pokémon...</p>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="max-w-md mx-auto px-6 py-20 text-center">
-          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-white mb-2">Something went wrong</h3>
-          <p className="text-slate-400">{error.message}</p>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && !error && filteredPokemons.length === 0 && searchTerm && (
-        <div className="max-w-md mx-auto px-6 py-20 text-center">
-          <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-4xl">🔍</span>
-          </div>
-          <h3 className="text-xl font-semibold text-white mb-2">No Pokémon found</h3>
-          <p className="text-slate-400">Try searching with a different name</p>
-        </div>
-      )}
-
-      {/* Pokemon Grid */}
-      {!loading && !error && filteredPokemons.length > 0 && (
-        <div className="px-6 pb-12">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {filteredPokemons.map((pokemon: Pokemon) => (
-                <Link href={`/pokemon/${pokemon.name.toLowerCase()}`} key={pokemon.id}>
-                  <div className="glass-card group cursor-pointer hover-lift p-4 text-center animate-fade-in">
-                    {/* Pokemon Image */}
-                    <div className="relative mb-3">
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <img
-                        src={pokemon.image}
-                        alt={pokemon.name}
-                        className="w-24 h-24 mx-auto relative img-zoom"
-                      />
-                    </div>
-
-                    {/* Pokemon Name */}
-                    <h2 className="text-white font-semibold capitalize mb-2 group-hover:text-blue-400 transition-colors">
-                      {pokemon.name}
-                    </h2>
-
-                    {/* Type Badges */}
-                    <div className="flex flex-wrap justify-center gap-1">
-                      {pokemon.types.map((type) => {
-                        const style = getTypeStyle(type);
-                        return (
-                          <span
-                            key={type}
-                            className={`${style.bg} ${style.text} text-xs px-2 py-0.5 rounded-full font-medium`}
-                          >
-                            {type}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </Link>
-              ))}
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Header - Fixed Feel */}
+        <header className="sticky top-0 z-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
+          <div className="max-w-6xl mx-auto px-6 py-6">
+            {/* Title */}
+            <div className="text-center mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex items-center justify-center gap-2 mb-2"
+              >
+                <Pokeball className="w-10 h-10" />
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Search Pokemon FM Tech
+                </h1>
+              </motion.div>
+              <motion.p
+                className="text-slate-400"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                Explore the complete Pokédex with detailed stats
+              </motion.p>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Footer */}
-      <footer className="py-8 text-center text-slate-500 text-sm">
-        <p>Dev by Bbest</p>
-      </footer>
-    </div>
+            {/* Search Input */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="max-w-2xl mx-auto"
+            >
+              <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Search Pokémon by name..."
+              />
+
+              {/* Results Count */}
+              <AnimatePresence mode="wait">
+                {debouncedSearch && !loading && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-slate-400 text-sm mt-3 text-center"
+                  >
+                    Found <span className="text-blue-400 font-medium">{filteredPokemons.length}</span> Pokémon matching &quot;{debouncedSearch}&quot;
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="px-6 py-8">
+          <div className="max-w-6xl mx-auto">
+            {/* Loading State - Skeleton */}
+            {loading && <PokemonGridSkeleton count={18} />}
+
+            {/* Error State */}
+            {error && (
+              <motion.div
+                className="max-w-md mx-auto py-20 text-center"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <SearchX className="w-8 h-8 text-red-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Something went wrong</h3>
+                <p className="text-slate-400">{error.message}</p>
+              </motion.div>
+            )}
+
+            {/* Empty State */}
+            <AnimatePresence mode="wait">
+              {!loading && !error && filteredPokemons.length === 0 && debouncedSearch && (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="max-w-md mx-auto py-20 text-center"
+                >
+                  <div className="w-20 h-20 bg-slate-800 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-4xl">🔍</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">No Pokémon found</h3>
+                  <p className="text-slate-400">
+                    Try searching with a different name
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Pokemon Grid */}
+            {!loading && !error && filteredPokemons.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {filteredPokemons.map((pokemon: Pokemon, index: number) => (
+                  <PokemonCard
+                    key={pokemon.id}
+                    id={pokemon.id}
+                    name={pokemon.name}
+                    image={pokemon.image}
+                    types={pokemon.types}
+                    index={index}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="py-8 text-center text-slate-500 text-sm border-t border-white/5">
+          <p>Dev by Bbest</p>
+        </footer>
+      </div>
+    </motion.div>
   );
 }
