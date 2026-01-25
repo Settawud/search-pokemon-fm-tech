@@ -1,6 +1,6 @@
 "use client"; // บอกว่าเป็น client component
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useQuery } from "@apollo/client/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,7 +32,7 @@ const pageVariants = {
   exit: { opacity: 0, transition: { duration: 0.2 } }
 };
 
-export default function Home() {
+function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -198,5 +198,13 @@ export default function Home() {
         </footer>
       </div>
     </motion.div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<PokemonGridSkeleton count={18} />}>
+      <SearchPageContent />
+    </Suspense>
   );
 }
