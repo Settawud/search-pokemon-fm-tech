@@ -37,3 +37,34 @@ export function getPokemonImage(number: string): string {
     const id = parseInt(number, 10);
     return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 }
+
+// Helper to get image from PokeAPI sprites JSON
+export function getPokemonImageFromSprites(sprites: string | null, pokemonId: number): string {
+    if (sprites) {
+        try {
+            const parsed = JSON.parse(sprites);
+            // Try to get official artwork first, then fall back to front_default
+            return parsed?.other?.["official-artwork"]?.front_default
+                || parsed?.front_default
+                || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+        } catch {
+            // Fallback to official artwork URL
+        }
+    }
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+}
+
+// Helper to extract types from PokeAPI format
+export function extractTypes(pokemonTypes: { pokemon_v2_type: { name: string } }[]): string[] {
+    return pokemonTypes.map(t => capitalize(t.pokemon_v2_type.name));
+}
+
+// Capitalize first letter
+export function capitalize(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Format Pokemon ID to 3-digit string (e.g., 1 -> "001")
+export function formatPokemonNumber(id: number): string {
+    return id.toString().padStart(3, "0");
+}
