@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { GET_POKEMON } from "../../lib/queries";
-import { getTypeStyle, cn, getPokemonImage } from "../../lib/utils";
+import { getTypeStyle, cn, capitalize, getPokemonImageFromSprites } from "../../lib/utils";
 import { PokemonDetailSkeleton } from "../../components/Skeleton";
 import {
     ChevronLeft,
@@ -23,54 +23,54 @@ import {
     ArrowRight
 } from "lucide-react";
 
-// Type definitions
-interface Attack {
+// Type definitions for PokeAPI
+interface PokeAPIPokemon {
+    id: number;
     name: string;
-    damage: number;
-    type: string;
-}
-
-interface PokemonDimension {
-    maximum: string;
-    minimum: string;
-}
-
-interface Evolution {
-    id: string;
-    name: string;
-    image: string;
-    number: string;
-}
-
-interface EvolutionRequirement {
-    amount: number;
-    name: string;
-}
-
-interface Pokemon {
-    id: string;
-    name: string;
-    image: string;
-    types: string[];
-    attacks: {
-        fast: Attack[];
-        special: Attack[];
+    height: number;
+    weight: number;
+    base_experience: number;
+    pokemon_v2_pokemontypes: {
+        pokemon_v2_type: {
+            name: string;
+        };
+    }[];
+    pokemon_v2_pokemonstats: {
+        base_stat: number;
+        pokemon_v2_stat: {
+            name: string;
+        };
+    }[];
+    pokemon_v2_pokemonabilities: {
+        pokemon_v2_ability: {
+            name: string;
+        };
+    }[];
+    pokemon_v2_pokemonsprites: {
+        sprites: string;
+    }[];
+    pokemon_v2_pokemonspecy: {
+        pokemon_v2_evolutionchain: {
+            pokemon_v2_pokemonspecies: {
+                id: number;
+                name: string;
+                order: number;
+                pokemon_v2_pokemons: {
+                    id: number;
+                    pokemon_v2_pokemonsprites: {
+                        sprites: string;
+                    }[];
+                }[];
+            }[];
+        };
+        pokemon_v2_pokemonspeciesflavortexts: {
+            flavor_text: string;
+        }[];
     };
-    maxCP: number;
-    maxHP: number;
-    weight: PokemonDimension;
-    height: PokemonDimension;
-    weaknesses: string[];
-    evolutions: Evolution[] | null;
-    resistant: string[];
-    number: string;
-    classification: string;
-    fleeRate: number;
-    evolutionRequirements: EvolutionRequirement | null;
 }
 
 interface GetPokemonData {
-    pokemon: Pokemon;
+    pokemon_v2_pokemon: PokeAPIPokemon[];
 }
 
 // Animation variants
@@ -123,9 +123,19 @@ function ProgressBar({ value, max, color, showLabel = true }: { value: number; m
     );
 }
 
+// Stat name to color map
+const statColors: Record<string, string> = {
+    hp: "bg-green-500",
+    attack: "bg-red-500",
+    defense: "bg-blue-500",
+    "special-attack": "bg-purple-500",
+    "special-defense": "bg-indigo-500",
+    speed: "bg-yellow-500",
+};
+
 export default function PokemonDetail() {
     const params = useParams();
-    const name = params.name as string;
+    const name = (params.name as string).toLowerCase();
 
     const { loading, error, data } = useQuery<GetPokemonData>(GET_POKEMON, {
         variables: { name },
@@ -144,7 +154,7 @@ export default function PokemonDetail() {
     }
 
     // Error/Not Found State
-    if (error || !data?.pokemon) {
+    if (error || !data?.pokemon_v2_pokemon?.[0]) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-6">
                 <motion.div
@@ -171,9 +181,26 @@ export default function PokemonDetail() {
         );
     }
 
-    const pokemon = data.pokemon;
-    const primaryType = pokemon.types[0];
+    const pokemon = data.pokemon_v2_pokemon[0];
+    const types = pokemon.pokemon_v2_pokemontypes.map(t => capitalize(t.pokemon_v2_type.name));
+    const primaryType = types[0];
     const primaryColor = getTypeStyle(primaryType);
+    const sprites = pokemon.pokemon_v2_pokemonsprites[0]?.sprites || null;
+    const imageUrl = getPokemonImageFromSprites(sprites, pokemon.id);
+
+    // Get stats
+    const stats = pokemon.pokemon_v2_pokemonstats || [];
+    const hpStat = stats.find(s => s.pokemon_v2_stat.name === "hp")?.base_stat || 0;
+    const attackStat = stats.find(s => s.pokemon_v2_stat.name === "attack")?.base_stat || 0;
+
+    // Get abilities
+    const abilities = pokemon.pokemon_v2_pokemonabilities?.map(a => capitalize(a.pokemon_v2_ability.name)) || [];
+
+    // Get evolution chain
+    const evolutionChain = pokemon.pokemon_v2_pokemonspecy?.pokemon_v2_evolutionchain?.pokemon_v2_pokemonspecies || [];
+
+    // Get flavor text (description)
+    const flavorText = pokemon.pokemon_v2_pokemonspecy?.pokemon_v2_pokemonspeciesflavortexts?.[0]?.flavor_text?.replace(/\n|\f/g, " ") || "";
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
@@ -186,11 +213,11 @@ export default function PokemonDetail() {
             {/* Content */}
             <div className="relative z-10">
                 {/* Header */}
-                <header className="px-6 py-6 border-b border-white/5">
+                <header className="px-6 py-6 border-b border-white/10">
                     <div className="max-w-6xl mx-auto">
                         <Link
                             href="/"
-                            className="inline-flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all group"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-blue-600 text-white font-medium rounded-xl border border-white/20 hover:border-blue-500 shadow-lg hover:shadow-blue-500/25 transition-all group"
                         >
                             <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                             Back to Pokédex
@@ -220,7 +247,7 @@ export default function PokemonDetail() {
                                     <div className={`absolute inset-0 ${primaryColor.solid} opacity-5 blur-3xl`} />
 
                                     {/* Pokemon Number */}
-                                    <span className="text-slate-500 text-sm font-mono">#{pokemon.number}</span>
+                                    <span className="text-slate-500 text-sm font-mono">#{pokemon.id.toString().padStart(3, "0")}</span>
 
                                     {/* Pokemon Image */}
                                     <motion.div
@@ -230,7 +257,7 @@ export default function PokemonDetail() {
                                     >
                                         <div className={`absolute inset-0 ${primaryColor.solid} opacity-20 blur-3xl rounded-full`} />
                                         <Image
-                                            src={getPokemonImage(pokemon.number)}
+                                            src={imageUrl}
                                             alt={pokemon.name}
                                             width={224}
                                             height={224}
@@ -241,11 +268,15 @@ export default function PokemonDetail() {
 
                                     {/* Pokemon Name */}
                                     <h1 className="text-4xl font-bold text-white capitalize mb-2">{pokemon.name}</h1>
-                                    <p className="text-slate-400 italic mb-4">{pokemon.classification}</p>
+
+                                    {/* Flavor Text */}
+                                    {flavorText && (
+                                        <p className="text-slate-400 italic text-sm mb-4 max-w-xs mx-auto">{flavorText}</p>
+                                    )}
 
                                     {/* Type Badges */}
                                     <div className="flex justify-center gap-2">
-                                        {pokemon.types.map((type) => {
+                                        {types.map((type) => {
                                             const style = getTypeStyle(type);
                                             return (
                                                 <span
@@ -259,152 +290,95 @@ export default function PokemonDetail() {
                                     </div>
                                 </motion.div>
 
-                                {/* Stats Grid */}
+                                {/* Stats Grid - Colored */}
                                 <div className="grid grid-cols-2 gap-3">
-                                    <StatCard label="Max CP" value={pokemon.maxCP} icon={TrendingUp} />
-                                    <StatCard label="Max HP" value={pokemon.maxHP} icon={Heart} />
-                                    <StatCard label="Weight" value={pokemon.weight.maximum} icon={Scale} />
-                                    <StatCard label="Height" value={pokemon.height.maximum} icon={Ruler} />
+                                    <StatCard label="Height" value={`${pokemon.height / 10}m`} icon={Ruler} colorClass="text-cyan-400" />
+                                    <StatCard label="Weight" value={`${pokemon.weight / 10}kg`} icon={Scale} colorClass="text-orange-400" />
+                                    <StatCard label="Base XP" value={pokemon.base_experience || "N/A"} icon={TrendingUp} colorClass="text-yellow-400" />
+                                    <StatCard label="Abilities" value={abilities.length} icon={Sparkles} colorClass="text-purple-400" />
                                 </div>
 
-                                {/* Flee Rate */}
-                                <motion.div
-                                    variants={itemVariants}
-                                    className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-4"
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <Target className="w-4 h-4 text-red-400" />
-                                            <span className="text-slate-400 text-sm">Flee Rate</span>
+                                {/* Abilities */}
+                                {abilities.length > 0 && (
+                                    <motion.div
+                                        variants={itemVariants}
+                                        className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-4"
+                                    >
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Target className="w-4 h-4 text-purple-400" />
+                                            <span className="text-slate-400 text-sm">Abilities</span>
                                         </div>
-                                        <span className="text-white font-medium">{(pokemon.fleeRate * 100).toFixed(0)}%</span>
-                                    </div>
-                                    <ProgressBar value={pokemon.fleeRate * 100} max={100} color="bg-red-500" showLabel={false} />
-                                </motion.div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {abilities.map((ability) => (
+                                                <span key={ability} className="px-3 py-1 bg-slate-800/50 rounded-full text-slate-300 text-sm">
+                                                    {ability}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
                             </div>
 
-                            {/* Right Column - Combat & Stats (7 cols) */}
+                            {/* Right Column - Stats (7 cols) */}
                             <div className="lg:col-span-7 space-y-6">
-                                {/* Resistances & Weaknesses */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Resistant */}
-                                    <motion.div
-                                        variants={itemVariants}
-                                        className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
-                                    >
-                                        <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-                                            <Shield className="w-4 h-4 text-green-400" />
-                                            Resistant To
-                                        </h3>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {pokemon.resistant.map((type) => {
-                                                const style = getTypeStyle(type);
-                                                return (
-                                                    <span
-                                                        key={type}
-                                                        className={`${style.bg} ${style.text} px-2 py-0.5 rounded text-xs font-medium border ${style.border}`}
-                                                    >
-                                                        {type}
-                                                    </span>
-                                                );
-                                            })}
-                                        </div>
-                                    </motion.div>
+                                {/* Base Stats */}
+                                <motion.div
+                                    variants={itemVariants}
+                                    className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
+                                >
+                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                        <TrendingUp className="w-5 h-5 text-green-400" />
+                                        Base Stats
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {stats.map((stat) => {
+                                            const statName = stat.pokemon_v2_stat.name;
+                                            const displayName = statName.replace("-", " ").split(" ").map(w => capitalize(w)).join(" ");
+                                            return (
+                                                <div key={statName}>
+                                                    <div className="flex justify-between text-sm mb-2">
+                                                        <span className="text-slate-400">{displayName}</span>
+                                                        <span className="text-white font-medium">{stat.base_stat}</span>
+                                                    </div>
+                                                    <ProgressBar
+                                                        value={stat.base_stat}
+                                                        max={255}
+                                                        color={statColors[statName] || "bg-slate-500"}
+                                                        showLabel={false}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </motion.div>
 
-                                    {/* Weaknesses */}
+                                {/* Quick Stats Summary */}
+                                <div className="grid grid-cols-2 gap-4">
                                     <motion.div
                                         variants={itemVariants}
                                         className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
                                     >
                                         <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-                                            <AlertTriangle className="w-4 h-4 text-red-400" />
-                                            Weak Against
+                                            <Heart className="w-4 h-4 text-green-400" />
+                                            HP
                                         </h3>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {pokemon.weaknesses.map((type) => {
-                                                const style = getTypeStyle(type);
-                                                return (
-                                                    <span
-                                                        key={type}
-                                                        className={`${style.bg} ${style.text} px-2 py-0.5 rounded text-xs font-medium border ${style.border}`}
-                                                    >
-                                                        {type}
-                                                    </span>
-                                                );
-                                            })}
-                                        </div>
+                                        <p className="text-3xl font-bold text-white">{hpStat}</p>
+                                    </motion.div>
+                                    <motion.div
+                                        variants={itemVariants}
+                                        className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
+                                    >
+                                        <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                                            <Sword className="w-4 h-4 text-red-400" />
+                                            Attack
+                                        </h3>
+                                        <p className="text-3xl font-bold text-white">{attackStat}</p>
                                     </motion.div>
                                 </div>
-
-                                {/* Fast Attacks */}
-                                <motion.div
-                                    variants={itemVariants}
-                                    className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
-                                >
-                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                        <Sword className="w-5 h-5 text-yellow-400" />
-                                        Fast Attacks
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {pokemon.attacks?.fast?.map((attack) => {
-                                            const style = getTypeStyle(attack.type);
-                                            return (
-                                                <div
-                                                    key={attack.name}
-                                                    className="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3 hover:bg-slate-800 transition-colors"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <span className={`${style.bg} ${style.text} px-2 py-0.5 rounded text-xs font-medium border ${style.border}`}>
-                                                            {attack.type}
-                                                        </span>
-                                                        <span className="text-white font-medium">{attack.name}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-yellow-400 font-bold">{attack.damage}</span>
-                                                        <span className="text-slate-500 text-xs">DMG</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </motion.div>
-
-                                {/* Special Attacks */}
-                                <motion.div
-                                    variants={itemVariants}
-                                    className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
-                                >
-                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                        <Zap className="w-5 h-5 text-purple-400" />
-                                        Special Attacks
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {pokemon.attacks?.special?.map((attack) => {
-                                            const style = getTypeStyle(attack.type);
-                                            return (
-                                                <div
-                                                    key={attack.name}
-                                                    className="bg-slate-800/50 rounded-lg px-4 py-3 hover:bg-slate-800 transition-colors"
-                                                >
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className={`${style.bg} ${style.text} px-2 py-0.5 rounded text-xs font-medium border ${style.border}`}>
-                                                                {attack.type}
-                                                            </span>
-                                                            <span className="text-white font-medium">{attack.name}</span>
-                                                        </div>
-                                                        <span className="text-purple-400 font-bold">{attack.damage}</span>
-                                                    </div>
-                                                    <ProgressBar value={attack.damage} max={150} color="bg-purple-500" showLabel={false} />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </motion.div>
 
                                 {/* Evolution Chain */}
                                 <AnimatePresence>
-                                    {pokemon.evolutions && pokemon.evolutions.filter(evo => evo.name.toLowerCase() !== pokemon.name.toLowerCase()).length > 0 && (
+                                    {evolutionChain.length > 1 && (
                                         <motion.div
                                             variants={itemVariants}
                                             className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
@@ -413,68 +387,50 @@ export default function PokemonDetail() {
                                                 <Sparkles className="w-5 h-5 text-blue-400" />
                                                 Evolution Chain
                                             </h3>
-                                            {pokemon.evolutionRequirements && (
-                                                <p className="text-slate-400 text-sm mb-4">
-                                                    Requires: <span className="text-blue-400">{pokemon.evolutionRequirements.amount} {pokemon.evolutionRequirements.name}</span>
-                                                </p>
-                                            )}
                                             <div className="flex items-center justify-center gap-4 flex-wrap">
-                                                {pokemon.evolutions.filter(evo => evo.name.toLowerCase() !== pokemon.name.toLowerCase()).map((evo, index) => (
-                                                    <div key={evo.id} className="flex items-center gap-4">
-                                                        {index > 0 && (
-                                                            <ArrowRight className="w-6 h-6 text-slate-500" />
-                                                        )}
-                                                        <Link
-                                                            href={`/pokemon/${evo.name.toLowerCase()}`}
-                                                            className="text-center group"
-                                                        >
-                                                            <motion.div
-                                                                className="w-20 h-20 bg-slate-800/50 border border-white/10 rounded-xl p-2 group-hover:border-blue-500/50 group-hover:bg-slate-800 transition-all"
-                                                                whileHover={{ scale: 1.1 }}
+                                                {evolutionChain.map((evo, index) => {
+                                                    const evoId = evo.pokemon_v2_pokemons[0]?.id || evo.id;
+                                                    const evoSprites = evo.pokemon_v2_pokemons[0]?.pokemon_v2_pokemonsprites[0]?.sprites || null;
+                                                    const evoImage = getPokemonImageFromSprites(evoSprites, evoId);
+
+                                                    return (
+                                                        <div key={evo.id} className="flex items-center gap-4">
+                                                            {index > 0 && (
+                                                                <ArrowRight className="w-6 h-6 text-slate-500" />
+                                                            )}
+                                                            <Link
+                                                                href={`/pokemon/${evo.name.toLowerCase()}`}
+                                                                className="text-center group"
                                                             >
-                                                                <Image src={getPokemonImage(evo.number)} alt={evo.name} width={80} height={80} className="w-full h-full object-contain" />
-                                                            </motion.div>
-                                                            <p className="text-slate-300 text-sm mt-2 capitalize group-hover:text-blue-400 transition-colors">
-                                                                {evo.name}
-                                                            </p>
-                                                        </Link>
-                                                    </div>
-                                                ))}
+                                                                <motion.div
+                                                                    className={cn(
+                                                                        "w-20 h-20 bg-slate-800/50 border rounded-xl p-2 group-hover:border-blue-500/50 group-hover:bg-slate-800 transition-all",
+                                                                        evo.name === pokemon.name ? "border-blue-500/50" : "border-white/10"
+                                                                    )}
+                                                                    whileHover={{ scale: 1.1 }}
+                                                                >
+                                                                    <Image
+                                                                        src={evoImage}
+                                                                        alt={evo.name}
+                                                                        width={80}
+                                                                        height={80}
+                                                                        className="w-full h-full object-contain"
+                                                                    />
+                                                                </motion.div>
+                                                                <p className={cn(
+                                                                    "text-sm mt-2 capitalize transition-colors",
+                                                                    evo.name === pokemon.name ? "text-blue-400" : "text-slate-300 group-hover:text-blue-400"
+                                                                )}>
+                                                                    {evo.name}
+                                                                </p>
+                                                            </Link>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
-
-                                {/* Combat Stats Overview */}
-                                <motion.div
-                                    variants={itemVariants}
-                                    className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
-                                >
-                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                        <TrendingUp className="w-5 h-5 text-green-400" />
-                                        Combat Stats
-                                    </h3>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <div className="flex justify-between text-sm mb-2">
-                                                <span className="text-slate-400 flex items-center gap-2">
-                                                    <TrendingUp className="w-4 h-4" /> Max CP
-                                                </span>
-                                                <span className="text-white font-medium">{pokemon.maxCP}</span>
-                                            </div>
-                                            <ProgressBar value={pokemon.maxCP} max={4000} color="bg-yellow-500" showLabel={false} />
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between text-sm mb-2">
-                                                <span className="text-slate-400 flex items-center gap-2">
-                                                    <Heart className="w-4 h-4" /> Max HP
-                                                </span>
-                                                <span className="text-white font-medium">{pokemon.maxHP}</span>
-                                            </div>
-                                            <ProgressBar value={pokemon.maxHP} max={500} color="bg-green-500" showLabel={false} />
-                                        </div>
-                                    </div>
-                                </motion.div>
                             </div>
                         </div>
                     </motion.div>
