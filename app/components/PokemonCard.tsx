@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { getTypeStyle, getPokemonImage } from "../lib/utils";
@@ -40,7 +41,21 @@ const cardVariants = {
     }
 };
 
+// Pokeball placeholder component for missing images
+function PokeballPlaceholder() {
+    return (
+        <div className="w-28 h-28 mx-auto flex items-center justify-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-b from-red-500 to-red-600 relative overflow-hidden shadow-lg opacity-50">
+                <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-white" />
+                <div className="absolute top-1/2 left-0 right-0 h-2 bg-slate-800 -translate-y-1/2" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-4 border-slate-800" />
+            </div>
+        </div>
+    );
+}
+
 export function PokemonCard({ name, image, types, index, number, onNavigate }: PokemonCardProps) {
+    const [imageError, setImageError] = useState(false);
     const primaryType = types[0];
     const primaryColor = getTypeStyle(primaryType);
     const imageUrl = number ? getPokemonImage(number) : image;
@@ -49,6 +64,10 @@ export function PokemonCard({ name, image, types, index, number, onNavigate }: P
         if (onNavigate) {
             onNavigate(name);
         }
+    };
+
+    const handleImageError = () => {
+        setImageError(true);
     };
 
     return (
@@ -78,16 +97,21 @@ export function PokemonCard({ name, image, types, index, number, onNavigate }: P
 
                     {/* Pokemon Image */}
                     <div className="relative mb-3 mt-4">
-                        <motion.img
-                            src={imageUrl}
-                            alt={name}
-                            className="w-28 h-28 mx-auto drop-shadow-xl object-contain"
-                            whileHover={{
-                                scale: 1.15,
-                                rotate: 5,
-                                transition: { duration: 0.2 }
-                            }}
-                        />
+                        {imageError ? (
+                            <PokeballPlaceholder />
+                        ) : (
+                            <motion.img
+                                src={imageUrl}
+                                alt={name}
+                                className="w-28 h-28 mx-auto drop-shadow-xl object-contain"
+                                onError={handleImageError}
+                                whileHover={{
+                                    scale: 1.15,
+                                    rotate: 5,
+                                    transition: { duration: 0.2 }
+                                }}
+                            />
+                        )}
 
                         {/* Glow Shadow underneath on hover */}
                         <div
@@ -122,3 +146,4 @@ export function PokemonCard({ name, image, types, index, number, onNavigate }: P
         </motion.div>
     );
 }
+

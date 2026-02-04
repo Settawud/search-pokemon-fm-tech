@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { recordSearch as recordSupabaseSearch, getPopularSearches as getSupabasePopular, isSupabaseConfigured } from "../lib/supabase";
 
 const STORAGE_KEY = "pokemon-search-stats";
 
@@ -16,16 +17,29 @@ interface SearchStats {
 
 /**
  * Hook สำหรับจัดการสถิติการ search Pokemon
- * - บันทึกทุกครั้งที่ user กดเข้าดู Pokemon detail
- * - ดึง Top N คำที่ถูก search บ่อยสุด
+ * - ใช้ Supabase เป็นหลักถ้า config ครบ
+ * - Fallback ไป localStorage ถ้าไม่มี Supabase
  */
 export function useSearchStats() {
     const [stats, setStats] = useState<SearchStats>({});
+    const [supabaseEnabled, setSupabaseEnabled] = useState(false);
 
-    // Load from localStorage on mount
+    // Check if Supabase is available and load initial data
     useEffect(() => {
-        if (typeof window === "undefined") return;
+        const hasSupabase = isSupabaseConfigured();
+        setSupabaseEnabled(hasSupabase);
 
+        if (hasSupabase) {
+            // Load from Supabase
+            loadFromSupabase();
+        } else {
+            // Load from localStorage
+            loadFromLocalStorage();
+        }
+    }, []);
+
+    const loadFromLocalStorage = () => {
+        if (typeof window === "undefined") return;
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
@@ -34,11 +48,28 @@ export function useSearchStats() {
         } catch (e) {
             console.warn("Failed to load search stats:", e);
         }
-    }, []);
+    };
 
-    // Save to localStorage when stats change
-    const saveStats = useCallback((newStats: SearchStats) => {
-        setStats(newStats);
+    const loadFromSupabase = async () => {
+        try {
+            const popular = await getSupabasePopular(50);
+            const newStats: SearchStats = {};
+            popular.forEach(record => {
+                newStats[record.pokemon_name] = {
+                    query: record.pokemon_name,
+                    count: record.search_count,
+                    lastSearched: new Date(record.last_searched_at).getTime()
+                };
+            });
+            setStats(newStats);
+        } catch (e) {
+            console.warn("Failed to load from Supabase:", e);
+            loadFromLocalStorage(); // Fallback
+        }
+    };
+
+    // Save to localStorage (fallback)
+    const saveToLocalStorage = useCallback((newStats: SearchStats) => {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
         } catch (e) {
@@ -49,11 +80,12 @@ export function useSearchStats() {
     /**
      * บันทึกการ search (เรียกเมื่อ user กดเข้าดู detail)
      */
-    const recordSearch = useCallback((query: string) => {
+    const recordSearch = useCallback(async (query: string) => {
         if (!query.trim()) return;
 
         const normalizedQuery = query.toLowerCase().trim();
 
+        // Always update local state
         setStats((prevStats) => {
             const existing = prevStats[normalizedQuery];
             const newStats = {
@@ -65,16 +97,16 @@ export function useSearchStats() {
                 },
             };
 
-            // Save to localStorage
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
-            } catch (e) {
-                console.warn("Failed to save search stats:", e);
-            }
-
+            // Save to localStorage as backup
+            saveToLocalStorage(newStats);
             return newStats;
         });
-    }, []);
+
+        // Also save to Supabase if available
+        if (supabaseEnabled) {
+            await recordSupabaseSearch(normalizedQuery);
+        }
+    }, [supabaseEnabled, saveToLocalStorage]);
 
     /**
      * ดึง Top N Pokemon ที่ถูก search บ่อยสุด
@@ -98,8 +130,9 @@ export function useSearchStats() {
      * Clear all stats
      */
     const clearStats = useCallback(() => {
-        saveStats({});
-    }, [saveStats]);
+        setStats({});
+        saveToLocalStorage({});
+    }, [saveToLocalStorage]);
 
     return {
         stats,
@@ -107,5 +140,7 @@ export function useSearchStats() {
         getPopularSearches,
         getRecentSearches,
         clearStats,
+        supabaseEnabled,
     };
 }
+
