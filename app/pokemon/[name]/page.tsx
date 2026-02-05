@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@apollo/client/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -135,6 +135,7 @@ const statColors: Record<string, string> = {
 
 export default function PokemonDetail() {
     const params = useParams();
+    const router = useRouter();
     const name = (params.name as string).toLowerCase();
 
     const { loading, error, data } = useQuery<GetPokemonData>(GET_POKEMON, {
@@ -215,13 +216,13 @@ export default function PokemonDetail() {
                 {/* Header */}
                 <header className="px-6 py-6 border-b border-white/10">
                     <div className="max-w-6xl mx-auto">
-                        <Link
-                            href="/"
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-blue-600 text-white font-medium rounded-xl border border-white/20 hover:border-blue-500 shadow-lg hover:shadow-blue-500/25 transition-all group"
+                        <button
+                            onClick={() => router.back()}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-blue-600 text-white font-medium rounded-xl border border-white/20 hover:border-blue-500 shadow-lg hover:shadow-blue-500/25 transition-all group cursor-pointer"
                         >
                             <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                             Back to Pokédex
-                        </Link>
+                        </button>
                     </div>
                 </header>
 
