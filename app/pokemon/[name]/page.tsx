@@ -20,7 +20,8 @@ import {
     Target,
     TrendingUp,
     Sparkles,
-    ArrowRight
+    ArrowRight,
+    Ban
 } from "lucide-react";
 
 // Type definitions for PokeAPI
@@ -200,6 +201,11 @@ export default function PokemonDetail() {
     // Get evolution chain
     const evolutionChain = pokemon.pokemon_v2_pokemonspecy?.pokemon_v2_evolutionchain?.pokemon_v2_pokemonspecies || [];
 
+    // Check if this is a special form that cannot evolve
+    const specialFormSuffixes = ['-starter', '-gmax', '-mega', '-totem', '-alola', '-galar', '-hisui', '-paldea'];
+    const isSpecialForm = specialFormSuffixes.some(suffix => pokemon.name.toLowerCase().endsWith(suffix));
+    const cannotEvolve = isSpecialForm && (pokemon.name.includes('-starter') || pokemon.name.includes('-gmax') || pokemon.name.includes('-mega'));
+
     // Get flavor text (description)
     const flavorText = pokemon.pokemon_v2_pokemonspecy?.pokemon_v2_pokemonspeciesflavortexts?.[0]?.flavor_text?.replace(/\n|\f/g, " ") || "";
 
@@ -377,9 +383,25 @@ export default function PokemonDetail() {
                                     </motion.div>
                                 </div>
 
-                                {/* Evolution Chain */}
+                                {/* Evolution Chain or Cannot Evolve Warning */}
                                 <AnimatePresence>
-                                    {evolutionChain.length > 1 && (
+                                    {cannotEvolve ? (
+                                        <motion.div
+                                            variants={itemVariants}
+                                            className="bg-slate-900/50 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-5"
+                                        >
+                                            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                                                <Ban className="w-5 h-5 text-yellow-400" />
+                                                Evolution
+                                            </h3>
+                                            <div className="flex items-center gap-3 text-yellow-400/80">
+                                                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                                                <p className="text-sm">
+                                                    This special form cannot evolve. It is a unique variant of the base Pokémon.
+                                                </p>
+                                            </div>
+                                        </motion.div>
+                                    ) : evolutionChain.length > 1 && (
                                         <motion.div
                                             variants={itemVariants}
                                             className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-5"
