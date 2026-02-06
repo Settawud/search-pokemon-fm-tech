@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { getTypeStyle, getPokemonImage } from "../lib/utils";
 
 interface PokemonCardProps {
@@ -14,31 +15,17 @@ interface PokemonCardProps {
     onNavigate?: (name: string) => void;
 }
 
-// Animation variants
+// Animation variants - simplified for better performance
 const cardVariants = {
-    hidden: {
-        opacity: 0,
-        y: 20,
-        scale: 0.95
-    },
+    hidden: { opacity: 0, y: 20 },
     visible: (index: number) => ({
         opacity: 1,
         y: 0,
-        scale: 1,
         transition: {
-            delay: index * 0.02,
-            duration: 0.4,
-            ease: [0.25, 0.1, 0.25, 1] as const
+            delay: Math.min(index * 0.02, 0.3), // Cap delay at 0.3s
+            duration: 0.3,
         }
     }),
-    hover: {
-        y: -10,
-        scale: 1.05,
-        transition: {
-            duration: 0.2,
-            ease: [0.25, 0.1, 0.25, 1] as const
-        }
-    }
 };
 
 // Pokeball placeholder component for missing images
@@ -53,6 +40,9 @@ function PokeballPlaceholder() {
         </div>
     );
 }
+
+// Base64 blur placeholder for images
+const BLUR_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
 export function PokemonCard({ name, image, types, index, number, onNavigate }: PokemonCardProps) {
     const [imageError, setImageError] = useState(false);
@@ -75,42 +65,39 @@ export function PokemonCard({ name, image, types, index, number, onNavigate }: P
             custom={index}
             initial="hidden"
             animate="visible"
-            whileHover="hover"
             variants={cardVariants}
+            className="transform-gpu" // GPU acceleration
         >
             <Link href={`/pokemon/${name.toLowerCase()}`} onClick={handleClick}>
-                <div className="relative group cursor-pointer bg-slate-900/60 backdrop-blur-sm border-2 border-white/10 hover:border-blue-500/50 rounded-2xl p-4 text-center overflow-hidden shadow-lg hover:shadow-blue-500/25 transition-all duration-300">
+                <div className="relative group cursor-pointer bg-slate-900/60 backdrop-blur-sm border-2 border-white/10 hover:border-blue-500/50 rounded-2xl p-4 text-center overflow-hidden shadow-lg hover:shadow-blue-500/25 transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02]">
                     {/* Background Gradient on Hover */}
                     <div
                         className={`absolute inset-0 ${primaryColor.solid} opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-2xl`}
                     />
-
-                    {/* Subtle Glow Ring on Hover */}
-                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <div className="absolute inset-0 border-2 border-blue-400/30 rounded-2xl" />
-                    </div>
 
                     {/* Pokemon Number Badge */}
                     <div className="absolute top-2 left-2 text-xs font-mono text-slate-400 bg-slate-800/90 px-2 py-1 rounded-lg border border-white/10 group-hover:border-blue-500/30 transition-colors">
                         #{number}
                     </div>
 
-                    {/* Pokemon Image */}
+                    {/* Pokemon Image - Using Next.js Image for optimization */}
                     <div className="relative mb-3 mt-4">
                         {imageError ? (
                             <PokeballPlaceholder />
                         ) : (
-                            <motion.img
-                                src={imageUrl}
-                                alt={name}
-                                className="w-28 h-28 mx-auto drop-shadow-xl object-contain"
-                                onError={handleImageError}
-                                whileHover={{
-                                    scale: 1.15,
-                                    rotate: 5,
-                                    transition: { duration: 0.2 }
-                                }}
-                            />
+                            <div className="w-28 h-28 mx-auto relative group-hover:scale-110 transition-transform duration-200">
+                                <Image
+                                    src={imageUrl}
+                                    alt={name}
+                                    fill
+                                    sizes="112px"
+                                    className="object-contain drop-shadow-xl"
+                                    onError={handleImageError}
+                                    placeholder="blur"
+                                    blurDataURL={BLUR_DATA_URL}
+                                    loading={index < 12 ? "eager" : "lazy"} // First 12 load eagerly
+                                />
+                            </div>
                         )}
 
                         {/* Glow Shadow underneath on hover */}
@@ -146,4 +133,3 @@ export function PokemonCard({ name, image, types, index, number, onNavigate }: P
         </motion.div>
     );
 }
-

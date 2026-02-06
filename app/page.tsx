@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, useCallback, useRef, useMemo } from "react";
 import { useLazyQuery } from "@apollo/client/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { GET_ALL_POKEMONS, SEARCH_POKEMONS, GET_POKEMONS_BY_TYPE } from "./lib/queries";
 import { useDebounce } from "./hooks/useDebounce";
@@ -10,11 +11,20 @@ import { useSearchStats } from "./hooks/useSearchStats";
 import { PokemonCard } from "./components/PokemonCard";
 import { SearchInput } from "./components/SearchInput";
 import { PokemonGridSkeleton } from "./components/Skeleton";
-import { TypeFilterChips } from "./components/TypeFilterChips";
-import { TopSearchedPokemon } from "./components/TopSearchedPokemon";
 import { SearchX, Filter, Loader2 } from "lucide-react";
 import { Pokeball } from "./components/Pokeball";
 import { extractTypes, getPokemonImageFromSprites, formatPokemonNumber, capitalize } from "./lib/utils";
+
+// Dynamic imports for non-critical components (code splitting)
+const TypeFilterChips = dynamic(() => import("./components/TypeFilterChips").then(mod => ({ default: mod.TypeFilterChips })), {
+  ssr: false,
+  loading: () => <div className="h-12 bg-slate-800/30 rounded-xl animate-pulse" />
+});
+
+const TopSearchedPokemon = dynamic(() => import("./components/TopSearchedPokemon").then(mod => ({ default: mod.TopSearchedPokemon })), {
+  ssr: false,
+  loading: () => null
+});
 
 const ITEMS_PER_PAGE = 30;
 
