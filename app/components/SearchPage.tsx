@@ -255,7 +255,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
 
     return (
         <motion.div
-            className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950"
+            className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 scroll-pt-[200px] sm:scroll-pt-[180px]"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -272,22 +272,22 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
             <div className="relative z-10 flex flex-col min-h-screen">
                 {/* Header - Fixed Feel */}
                 <header className="sticky top-0 z-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
-                    <div className="max-w-6xl mx-auto px-6 py-6">
+                    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-6">
                         {/* Title */}
-                        <div className="text-center mb-6">
+                        <div className="text-center mb-2 sm:mb-6">
                             <motion.div
                                 initial={{ opacity: 0, y: -20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5 }}
-                                className="flex items-center justify-center gap-2 mb-2"
+                                className="flex items-center justify-center gap-2 mb-1 sm:mb-2"
                             >
-                                <Pokeball className="w-10 h-10" />
-                                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                                <Pokeball className="w-7 h-7 sm:w-10 sm:h-10" />
+                                <h1 className="text-xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                                     Search Pokédex
                                 </h1>
                             </motion.div>
                             <motion.p
-                                className="text-slate-400"
+                                className="text-slate-400 text-sm sm:text-base hidden sm:block"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.2 }}
