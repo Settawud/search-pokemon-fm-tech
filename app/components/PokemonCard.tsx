@@ -12,20 +12,20 @@ interface PokemonCardProps {
     types: string[];
     index: number;
     number: string;
-    onNavigate?: (name: string) => void;
+    isNewCard?: boolean; // Controls if card should animate on mount
 }
 
-// Animation variants - simplified for better performance
-// Animation variants - simplified for better performance
+// Animation variants - only animate first batch, subsequent cards appear instantly
 const cardVariants = {
     hidden: { opacity: 0, y: 10 },
     visible: (index: number) => ({
         opacity: 1,
         y: 0,
         transition: {
-            // Reduced delay and duration for snappier feel
-            delay: index < 8 ? index * 0.05 : 0,
-            duration: 0.2,
+            // Only animate cards in the first visible batch (0-5)
+            // Cards loaded via infinite scroll appear instantly
+            delay: index < 6 ? index * 0.03 : 0,
+            duration: index < 6 ? 0.15 : 0,
         }
     }),
 };
@@ -46,17 +46,11 @@ function PokeballPlaceholder() {
 // Base64 blur placeholder for images
 const BLUR_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
-export function PokemonCard({ name, image, types, index, number, onNavigate }: PokemonCardProps) {
+export function PokemonCard({ name, image, types, index, number, isNewCard = true }: PokemonCardProps) {
     const [imageError, setImageError] = useState(false);
     const primaryType = types[0];
     const primaryColor = getTypeStyle(primaryType);
     const imageUrl = number ? getPokemonImage(number) : image;
-
-    const handleClick = () => {
-        if (onNavigate) {
-            onNavigate(name);
-        }
-    };
 
     const handleImageError = () => {
         setImageError(true);
@@ -65,12 +59,12 @@ export function PokemonCard({ name, image, types, index, number, onNavigate }: P
     return (
         <motion.div
             custom={index}
-            initial="hidden"
+            initial={isNewCard ? "hidden" : false}
             animate="visible"
             variants={cardVariants}
             className="transform-gpu backface-hidden" // Hardware acceleration hints
         >
-            <Link href={`/pokemon/${name.toLowerCase()}`} onClick={handleClick}>
+            <Link href={`/pokemon/${name.toLowerCase()}`}>
                 <div className="relative group cursor-pointer bg-slate-900/80 border-2 border-white/5 hover:border-blue-500/50 rounded-2xl p-4 text-center overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:bg-slate-800/80">
                     {/* Background Gradient on Hover */}
                     <div

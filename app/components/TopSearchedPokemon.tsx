@@ -21,7 +21,6 @@ interface TopSearchedPokemonProps {
         types: string[];
         number: string;
     }[];
-    onPokemonClick?: (name: string) => void;
     className?: string;
 }
 
@@ -42,7 +41,6 @@ const rankGradients = [
 export function TopSearchedPokemon({
     topSearches,
     allPokemons,
-    onPokemonClick,
     className,
 }: TopSearchedPokemonProps) {
     if (topSearches.length === 0) return null;
@@ -93,7 +91,6 @@ export function TopSearchedPokemon({
                             >
                                 <Link
                                     href={`/pokemon/${pokemon.name.toLowerCase()}`}
-                                    onClick={() => onPokemonClick?.(pokemon.name)}
                                     className="group block"
                                 >
                                     {/* Container with rank number + card */}

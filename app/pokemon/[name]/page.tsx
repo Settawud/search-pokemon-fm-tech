@@ -2,11 +2,13 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@apollo/client/react";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { GET_POKEMON } from "../../lib/queries";
 import { getTypeStyle, cn, capitalize, getPokemonImageFromSprites } from "../../lib/utils";
+import { useSearchStats } from "../../hooks/useSearchStats";
 import { PokemonDetailSkeleton } from "../../components/Skeleton";
 import {
     ChevronLeft,
@@ -139,10 +141,20 @@ export default function PokemonDetail() {
     const router = useRouter();
     const name = (params.name as string).toLowerCase();
 
+    // Search Statistics Hook - record when user visits this page
+    const { recordSearch } = useSearchStats();
+
     const { loading, error, data } = useQuery<GetPokemonData>(GET_POKEMON, {
         variables: { name },
         fetchPolicy: "network-only", // Bypass cache for detail page to avoid keyFields extraction issues
     });
+
+    // Record the search when pokemon data is successfully loaded
+    useEffect(() => {
+        if (data?.pokemon_v2_pokemon?.[0]) {
+            recordSearch(name);
+        }
+    }, [data, name, recordSearch]);
 
     // Loading State - Skeleton
     if (loading) {

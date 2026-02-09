@@ -54,12 +54,13 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
     const [totalCount, setTotalCount] = useState(initialTotalCount);
     const [hasMore, setHasMore] = useState(initialPokemons.length < initialTotalCount);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [previousCount, setPreviousCount] = useState(0); // Track previous count for animation
 
     const debouncedSearch = useDebounce(searchTerm, 300);
     const offsetRef = useRef(initialPokemons.length); // Start offset after initial data
 
     // Search Statistics Hook
-    const { recordSearch, getPopularSearches, getRecentSearches } = useSearchStats();
+    const { getPopularSearches, getRecentSearches } = useSearchStats();
     const popularSearches = getPopularSearches(10);
 
     // Lazy Queries for dynamic fetching (client-side navigation/filtering)
@@ -127,8 +128,11 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                 setTotalCount(count);
 
                 if (append) {
+                    // Track previous count for animation - existing cards won't re-animate
+                    setPreviousCount(prev => displayedPokemons.length);
                     setDisplayedPokemons(prev => [...prev, ...newPokemons]);
                 } else {
+                    setPreviousCount(0); // Reset on new search/filter
                     setDisplayedPokemons(newPokemons);
                 }
 
@@ -239,11 +243,6 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
             router.replace("/", { scroll: false });
         }
     }, [debouncedSearch, selectedType, router]);
-
-    // Handle Pokemon card click - record search stats
-    const handlePokemonClick = useCallback((pokemonName: string) => {
-        recordSearch(pokemonName);
-    }, [recordSearch]);
 
     // Handle popular search click - auto-fill search
     const handlePopularSearchClick = useCallback((query: string) => {
@@ -370,7 +369,6 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                             <TopSearchedPokemon
                                 topSearches={popularSearches}
                                 allPokemons={displayedPokemons}
-                                onPokemonClick={handlePokemonClick}
                                 className="mb-8"
                             />
                         )}
@@ -407,7 +405,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                                             types={pokemon.types}
                                             index={index}
                                             number={pokemon.number}
-                                            onNavigate={handlePokemonClick}
+                                            isNewCard={index >= previousCount}
                                         />
                                     ))}
                                 </div>
