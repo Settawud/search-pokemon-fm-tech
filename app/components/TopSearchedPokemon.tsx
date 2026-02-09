@@ -72,7 +72,7 @@ export function TopSearchedPokemon({
                     <TrendingUp className="w-6 h-6 text-yellow-400" />
                 </div>
                 <div>
-                    <h2 className="text-2xl font-bold text-white">Top 10 Trending</h2>
+                    <h2 className="text-2xl font-bold text-white">Trending</h2>
                     <p className="text-slate-400 text-sm">Most searched Pokémon</p>
                 </div>
             </div>
