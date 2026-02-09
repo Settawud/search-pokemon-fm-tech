@@ -165,6 +165,11 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
         // setDisplayedPokemons([]); 
         setHasMore(true);
         fetchPokemons(0, false);
+
+        // Record search when user searches for a specific Pokemon name
+        if (debouncedSearch && debouncedSearch.length >= 3) {
+            recordSearch(debouncedSearch);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearch, selectedType]);
 
