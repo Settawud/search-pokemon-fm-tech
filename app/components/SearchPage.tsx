@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GET_ALL_POKEMONS, SEARCH_POKEMONS, GET_POKEMONS_BY_TYPE } from "../lib/queries";
 import { useDebounce } from "../hooks/useDebounce";
 import { useSearchStats } from "../hooks/useSearchStats";
+import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { PokemonCard } from "./PokemonCard";
 import { SearchInput } from "./SearchInput";
 import { PokemonGridSkeleton } from "./Skeleton";
@@ -62,6 +63,9 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
     // Search Statistics Hook
     const { getPopularSearches, getRecentSearches } = useSearchStats();
     const popularSearches = getPopularSearches(10);
+
+    // Scroll Restoration Hook - restore scroll position when navigating back
+    useScrollRestoration();
 
     // Lazy Queries for dynamic fetching (client-side navigation/filtering)
     // Note: We only use these for SUBSEQUENT fetches or filtering changes
