@@ -14,8 +14,41 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pokemon Search",
-  description: "Search for your favorite Pokemon",
+  title: "Pokémon Search | ค้นหาโปเกมอนทุกตัว",
+  description: "ค้นหาและดูข้อมูล Pokémon กว่า 1000 ตัว พร้อม Stats, Abilities, Evolution Chain และอื่นๆ อีกมากมาย",
+  keywords: ["Pokemon", "Pokémon", "Pokedex", "โปเกมอน", "ค้นหา", "Search", "GraphQL", "PokeAPI"],
+  authors: [{ name: "Bbest" }],
+  creator: "Bbest",
+  metadataBase: new URL("https://search-pokemon-fm-tech-six.vercel.app"),
+  openGraph: {
+    type: "website",
+    locale: "th_TH",
+    url: "https://search-pokemon-fm-tech-six.vercel.app",
+    siteName: "Pokémon Search",
+    title: "Pokémon Search | ค้นหาโปเกมอนทุกตัว",
+    description: "ค้นหาและดูข้อมูล Pokémon กว่า 1000 ตัว พร้อม Stats, Abilities, Evolution Chain และอื่นๆ อีกมากมาย",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Pokémon Search - ค้นหาโปเกมอนทุกตัว",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pokémon Search | ค้นหาโปเกมอนทุกตัว",
+    description: "ค้นหาและดูข้อมูล Pokémon กว่า 1000 ตัว พร้อม Stats, Abilities, Evolution Chain",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -30,7 +63,7 @@ export default function RootLayout({
       >
         <Providers>
           {children}
-        </Providers> 
+        </Providers>
       </body>
     </html>
   );
