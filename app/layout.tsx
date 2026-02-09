@@ -25,22 +25,13 @@ export const metadata: Metadata = {
     locale: "th_TH",
     url: "https://search-pokemon-fm-tech-six.vercel.app",
     siteName: "Pokémon Search",
-    title: "Pokémon Search | ค้นหาโปเกมอนทุกตัว",
-    description: "ค้นหาและดูข้อมูล Pokémon กว่า 1000 ตัว พร้อม Stats, Abilities, Evolution Chain และอื่นๆ อีกมากมาย",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Pokémon Search - ค้นหาโปเกมอนทุกตัว",
-      },
-    ],
+    title: "Pokémon Search | ค้นหาและดูข้อมูลโปเกมอนทุกตัว",
+    description: "ค้นหาและดูข้อมูล Pokémon กว่า 1000 ตัว พร้อม Stats, Abilities, Evolution Chain และอื่นๆ อีกมากมาย ลองเลย!",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pokémon Search | ค้นหาโปเกมอนทุกตัว",
-    description: "ค้นหาและดูข้อมูล Pokémon กว่า 1000 ตัว พร้อม Stats, Abilities, Evolution Chain",
-    images: ["/og-image.png"],
+    title: "Pokémon Search | ค้นหาและดูข้อมูลโปเกมอนทุกตัว",
+    description: "ค้นหาและดูข้อมูล Pokémon กว่า 1000 ตัว พร้อม Stats, Abilities, Evolution Chain และอื่นๆ อีกมากมาย",
   },
   robots: {
     index: true,
