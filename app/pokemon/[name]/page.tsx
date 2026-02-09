@@ -141,6 +141,7 @@ export default function PokemonDetail() {
 
     const { loading, error, data } = useQuery<GetPokemonData>(GET_POKEMON, {
         variables: { name },
+        fetchPolicy: "network-only", // Bypass cache for detail page to avoid keyFields extraction issues
     });
 
     // Loading State - Skeleton
