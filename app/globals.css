@@ -127,6 +127,16 @@ body {
   background: #475569;
 }
 
+/* Hide scrollbar utility - keeps scroll functionality but hides the bar */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
 /* Animation keyframes */
 @keyframes fadeIn {
   from {
