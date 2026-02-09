@@ -21,9 +21,6 @@ export const GET_POKEMONS = gql`
                     name
                 }
             }
-            pokemon_v2_pokemonsprites {
-                sprites
-            }
         }
         pokemon_v2_pokemon_aggregate(
             where: {
@@ -51,9 +48,6 @@ export const GET_ALL_POKEMONS = gql`
                     name
                 }
             }
-            pokemon_v2_pokemonsprites {
-                sprites
-            }
         }
         pokemon_v2_pokemon_aggregate {
             aggregate {
@@ -79,9 +73,6 @@ export const SEARCH_POKEMONS = gql`
                     name
                 }
             }
-            pokemon_v2_pokemonsprites {
-                sprites
-            }
         }
         pokemon_v2_pokemon_aggregate(where: { name: { _ilike: $search } }) {
             aggregate {
@@ -106,9 +97,6 @@ export const GET_POKEMONS_BY_TYPE = gql`
                 pokemon_v2_type {
                     name
                 }
-            }
-            pokemon_v2_pokemonsprites {
-                sprites
             }
         }
         pokemon_v2_pokemon_aggregate(

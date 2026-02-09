@@ -68,3 +68,36 @@ export function capitalize(str: string): string {
 export function formatPokemonNumber(id: number): string {
     return id.toString().padStart(3, "0");
 }
+
+// Interfaces
+export interface PokeAPIPokemon {
+    id: number;
+    name: string;
+    pokemon_v2_pokemontypes: {
+        pokemon_v2_type: {
+            name: string;
+        };
+    }[];
+    pokemon_v2_pokemonsprites?: {
+        sprites: string;
+    }[];
+}
+
+export interface Pokemon {
+    id: string;
+    name: string;
+    image: string;
+    types: string[];
+    number: string;
+}
+
+// Transform PokeAPI data to our format
+export function transformPokemon(pokemon: PokeAPIPokemon): Pokemon {
+    return {
+        id: pokemon.id.toString(),
+        name: capitalize(pokemon.name),
+        image: getPokemonImage(formatPokemonNumber(pokemon.id)),
+        types: extractTypes(pokemon.pokemon_v2_pokemontypes),
+        number: formatPokemonNumber(pokemon.id),
+    };
+}

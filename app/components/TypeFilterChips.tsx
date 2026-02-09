@@ -186,7 +186,16 @@ export function TypeFilterChips({
 
     return (
         <div className={cn("w-full", className)}>
-            <div className="flex flex-wrap justify-center gap-2.5">
+            <div className="
+                flex 
+                overflow-x-auto 
+                pb-4 
+                -mx-6 px-6 
+                snap-x snap-mandatory 
+                scrollbar-hide 
+                md:flex-wrap md:justify-center md:overflow-visible md:pb-0 md:mx-0 md:px-0
+                gap-2.5
+            ">
                 {POKEMON_TYPES.map((type, index) => {
                     const isSelected = type === "All" ? !selectedType : selectedType === type;
                     const colors = typeColors[type] || typeColors.Normal;
@@ -196,25 +205,21 @@ export function TypeFilterChips({
                             key={type}
                             onClick={() => handleTypeClick(type)}
                             className={cn(
+                                "flex-shrink-0 snap-start",
                                 "px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all duration-200",
                                 isSelected
                                     ? `${colors.bgSelected} text-white border-transparent shadow-lg ${colors.glow}`
                                     : `${colors.bg} ${colors.text} ${colors.border} hover:border-white/30`,
                             )}
-                            initial={{ opacity: 0, scale: 0.8 }}
+                            initial={{ opacity: 0, scale: 0.9 }}
                             animate={{
                                 opacity: 1,
                                 scale: 1,
                                 y: isSelected ? -2 : 0,
                             }}
                             transition={{
-                                delay: index * 0.02,
-                                duration: 0.2
-                            }}
-                            whileHover={{
-                                scale: 1.1,
-                                y: -4,
-                                transition: { duration: 0.15 }
+                                duration: 0.2,
+                                delay: index < 10 ? index * 0.03 : 0 // Only stagger first few items for performance
                             }}
                             whileTap={{ scale: 0.95 }}
                         >
@@ -222,6 +227,10 @@ export function TypeFilterChips({
                         </motion.button>
                     );
                 })}
+            </div>
+            {/* Scroll indicator for mobile */}
+            <div className="md:hidden flex justify-center mt-1 gap-1">
+                <div className="w-8 h-1 rounded-full bg-slate-700/50" />
             </div>
         </div>
     );
