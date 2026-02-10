@@ -47,7 +47,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
     const [selectedType, setSelectedType] = useState<string | null>(
         searchParams.get("type") || null
     );
-    const [showFilters, setShowFilters] = useState(true);
+    const [showFilters, setShowFilters] = useState(false);
 
     // Header collapse state based on scroll direction
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
