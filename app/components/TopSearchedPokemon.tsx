@@ -77,7 +77,7 @@ export function TopSearchedPokemon({
 
             {/* Netflix-style Premium Cards */}
             <div className="relative">
-                <div className="flex gap-1 overflow-x-auto pb-4 scrollbar-hide">
+                <div className="flex gap-4 overflow-x-auto px-4 py-8 scrollbar-hide overflow-y-hidden">
                     {topPokemonsWithData.map((pokemon, index) => {
                         if (!pokemon) return null;
 
