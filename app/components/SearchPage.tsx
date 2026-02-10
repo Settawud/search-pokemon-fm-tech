@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, Suspense, useCallback, useRef, useMemo } from "react";
-import { useLazyQuery } from "@apollo/client/react";
+import { useLazyQuery, useApolloClient } from "@apollo/client/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { GET_ALL_POKEMONS, SEARCH_POKEMONS, GET_POKEMONS_BY_TYPE } from "../lib/queries";
 import { useDebounce } from "../hooks/useDebounce";
@@ -15,7 +16,7 @@ import { PokemonGridSkeleton } from "./Skeleton";
 import { SearchX, Filter, Loader2 } from "lucide-react";
 import { Pokeball } from "./Pokeball";
 import { extractTypes, formatPokemonNumber, capitalize, getPokemonImage, transformPokemon, type Pokemon, type PokeAPIPokemon } from "../lib/utils";
-import { TypeFilterChips } from "./TypeFilterChips"; // Not dynamic anymore for immediate interactivity if possible, or keep dynamic if heavy
+import { TypeFilterChips } from "./TypeFilterChips";
 
 // Dynamic imports for non-critical components
 const TopSearchedPokemon = dynamic(() => import("./TopSearchedPokemon").then(mod => ({ default: mod.TopSearchedPokemon })), {
@@ -24,8 +25,6 @@ const TopSearchedPokemon = dynamic(() => import("./TopSearchedPokemon").then(mod
 });
 
 const ITEMS_PER_PAGE = 30;
-
-
 
 // Page transition variants
 const pageVariants = {
@@ -50,25 +49,80 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
     );
     const [showFilters, setShowFilters] = useState(true);
 
+    // Header collapse state based on scroll direction
+    const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+    const lastScrollY = useRef(0);
+    const scrollDelta = useRef(0);
+    const scrollThreshold = 80;  // min Y before hiding
+    const deltaThreshold = 15;   // must scroll 15px consistently to toggle
+
     // Initialize with passed props
     const [displayedPokemons, setDisplayedPokemons] = useState<Pokemon[]>(initialPokemons);
     const [totalCount, setTotalCount] = useState(initialTotalCount);
     const [hasMore, setHasMore] = useState(initialPokemons.length < initialTotalCount);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [previousCount, setPreviousCount] = useState(0); // Track previous count for animation
+    const [previousCount, setPreviousCount] = useState(0);
 
     const debouncedSearch = useDebounce(searchTerm, 300);
-    const offsetRef = useRef(initialPokemons.length); // Start offset after initial data
+    const offsetRef = useRef(initialPokemons.length);
 
     // Search Statistics Hook
     const { getPopularSearches, getRecentSearches } = useSearchStats();
     const popularSearches = getPopularSearches(10);
 
-    // Scroll Restoration Hook - restore scroll position when navigating back
-    useScrollRestoration();
+    // Scroll Restoration Hook
+    const { saveScrollState, getSavedState, restoreScrollPosition, clearScrollState } = useScrollRestoration();
 
-    // Lazy Queries for dynamic fetching (client-side navigation/filtering)
-    // Note: We only use these for SUBSEQUENT fetches or filtering changes
+    // Apollo client for direct queries
+    const apolloClient = useApolloClient();
+
+    // Scroll direction detection for header auto-hide
+    useEffect(() => {
+        let ticking = false;
+
+        const handleScroll = () => {
+            if (ticking) return;
+            ticking = true;
+
+            requestAnimationFrame(() => {
+                const currentScrollY = window.scrollY;
+                const diff = currentScrollY - lastScrollY.current;
+
+                // At top → always show, reset
+                if (currentScrollY <= 10) {
+                    setIsHeaderCollapsed(false);
+                    scrollDelta.current = 0;
+                    lastScrollY.current = currentScrollY;
+                    ticking = false;
+                    return;
+                }
+
+                // Accumulate delta; reset when direction reverses
+                if (diff > 0) {
+                    scrollDelta.current = scrollDelta.current > 0 ? scrollDelta.current + diff : diff;
+                } else if (diff < 0) {
+                    scrollDelta.current = scrollDelta.current < 0 ? scrollDelta.current + diff : diff;
+                }
+
+                // Only toggle after consistent deltaThreshold
+                if (scrollDelta.current > deltaThreshold && currentScrollY > scrollThreshold) {
+                    setIsHeaderCollapsed(true);
+                    scrollDelta.current = 0;
+                } else if (scrollDelta.current < -deltaThreshold) {
+                    setIsHeaderCollapsed(false);
+                    scrollDelta.current = 0;
+                }
+
+                lastScrollY.current = currentScrollY;
+                ticking = false;
+            });
+        };
+
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    // Lazy Queries for dynamic fetching
     interface QueryData {
         pokemon_v2_pokemon: PokeAPIPokemon[];
         pokemon_v2_pokemon_aggregate: {
@@ -100,9 +154,6 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
         try {
             let result;
 
-            // Variables now exclude sprites if query optimized? 
-            // We will perform query optimization in separate step, but logic remains same.
-
             if (queryMode === "search") {
                 result = await fetchSearch({
                     variables: {
@@ -132,11 +183,10 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                 setTotalCount(count);
 
                 if (append) {
-                    // Track previous count for animation - existing cards won't re-animate
                     setPreviousCount(prev => displayedPokemons.length);
                     setDisplayedPokemons(prev => [...prev, ...newPokemons]);
                 } else {
-                    setPreviousCount(0); // Reset on new search/filter
+                    setPreviousCount(0);
                     setDisplayedPokemons(newPokemons);
                 }
 
@@ -150,52 +200,71 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
     }, [queryMode, debouncedSearch, selectedType, fetchAll, fetchSearch, fetchByType]);
 
     // Reset and fetch when search/filter changes
-    // IMPORTANT: We need to skip this on initial render if we have initialData AND search params match (Complex, easier to just let it run if params change, or check if params differ from initial).
-    // For simplicity: If initial load covers the state, don't re-fetch.
-
     const isFirstRender = useRef(true);
 
     useEffect(() => {
-        // If it's the very first render and we have initial data matching the URL (which we assume from SSR), skip.
-        // However, user might have just navigated here.
-        // If search/type changes from what passed in props, we fetch.
+        let isMounted = true; // Track mount status for StrictMode
 
         if (isFirstRender.current) {
             isFirstRender.current = false;
-            // If query params exist, SSR likely handled them (if we implement SSR with params). 
-            // If we only SSR "All" state, then we might need to fetch if URL has params.
-            // Assuming we SSR based on URL params in page.tsx:
-            return;
+
+            const savedState = getSavedState();
+            if (savedState && savedState.itemsCount > ITEMS_PER_PAGE) {
+                const extraItems = savedState.itemsCount - initialPokemons.length;
+                if (extraItems > 0) {
+                    const loadSavedItems = async () => {
+                        try {
+                            const result = await apolloClient.query<QueryData>({
+                                query: GET_ALL_POKEMONS,
+                                variables: { limit: extraItems, offset: initialPokemons.length },
+                                fetchPolicy: 'cache-first',
+                            });
+                            // Only update state if component is still mounted
+                            if (!isMounted) return;
+                            if (result.data?.pokemon_v2_pokemon) {
+                                const morePokemons = result.data.pokemon_v2_pokemon.map(transformPokemon);
+                                setPreviousCount(0);
+                                setDisplayedPokemons(prev => [...prev, ...morePokemons]);
+                                offsetRef.current = initialPokemons.length + morePokemons.length;
+                                setHasMore(offsetRef.current < initialTotalCount);
+                                setTimeout(() => restoreScrollPosition(), 100);
+                            }
+                        } catch (err) {
+                            if (!isMounted) return;
+                            console.error("Error restoring saved items:", err);
+                        }
+                    };
+                    loadSavedItems();
+                }
+            }
+
+            // Cleanup: reset for StrictMode remount
+            return () => {
+                isMounted = false;
+                isFirstRender.current = true;
+            };
         }
 
         offsetRef.current = 0;
-        // Clearing list is optional visual preference, maybe keep old results until new ones load?
-        // setDisplayedPokemons([]); 
         setHasMore(true);
+        clearScrollState();
         fetchPokemons(0, false);
+
+        return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearch, selectedType]);
-
 
     // Load more Pokemon
     const loadMore = useCallback(async () => {
         if (isLoadingMore || !hasMore || loading) return;
 
-        const newOffset = offsetRef.current;
-        // offsetRef should be updated to displayedPokemons.length actually to be safe
-        // or keep track manually.
         const currentLength = displayedPokemons.length;
-
         await fetchPokemons(currentLength, true);
-        // Update offset ref after fetch success? Or just use length.
         offsetRef.current = currentLength + ITEMS_PER_PAGE;
-
     }, [fetchPokemons, hasMore, isLoadingMore, loading, displayedPokemons.length]);
 
-    // Intersection Observer for Infinite Scroll - using callback ref pattern
+    // Intersection Observer for Infinite Scroll
     const observerRef = useRef<IntersectionObserver | null>(null);
-
-    // Store latest values in refs to avoid stale closures
     const hasMoreRef = useRef(hasMore);
     const isLoadingMoreRef = useRef(isLoadingMore);
     const loadingRef = useRef(loading);
@@ -208,14 +277,11 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
         loadMoreFnRef.current = loadMore;
     }, [hasMore, isLoadingMore, loading, loadMore]);
 
-    // Callback ref - this will be called when the element mounts/unmounts
     const setLoadMoreRef = useCallback((node: HTMLDivElement | null) => {
-        // Disconnect previous observer
         if (observerRef.current) {
             observerRef.current.disconnect();
         }
 
-        // If node exists, set up new observer
         if (node) {
             observerRef.current = new IntersectionObserver(
                 (entries) => {
@@ -226,7 +292,6 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                 },
                 { threshold: 0.1, rootMargin: "300px" }
             );
-
             observerRef.current.observe(node);
         }
     }, []);
@@ -248,10 +313,11 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
         }
     }, [debouncedSearch, selectedType, router]);
 
-    // Handle popular search click - auto-fill search
+    // Handle popular search click
     const handlePopularSearchClick = useCallback((query: string) => {
         setSearchTerm(query);
     }, []);
+
 
     // Check if we're in "home" state (no search, no filter)
     const isHomeState = !debouncedSearch && !selectedType;
@@ -260,11 +326,10 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
         <motion.div
             className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 scroll-pt-[200px] sm:scroll-pt-[180px]"
             variants={pageVariants}
-            initial="initial"
+            initial={false}
             animate="animate"
-            exit="exit"
         >
-            {/* Mesh Gradient Background - Simplified for performance? keeping for now */}
+            {/* Mesh Gradient Background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl transform-gpu" />
                 <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl transform-gpu" />
@@ -273,39 +338,29 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
 
             {/* Content */}
             <div className="relative z-10 flex flex-col min-h-screen">
-                {/* Header - Fixed Feel */}
-                <header className="sticky top-0 z-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
-                    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-6">
+                {/* Header - Sticky with slide-up hide on scroll */}
+                <header
+                    className="sticky top-0 z-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 transition-transform duration-300 ease-in-out"
+                    style={{ transform: isHeaderCollapsed ? 'translateY(-100%)' : 'translateY(0)' }}
+                >
+                    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2 sm:py-6">
                         {/* Title */}
                         <div className="text-center mb-2 sm:mb-6">
-                            <motion.div
-                                initial={{ opacity: 0, y: -20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5 }}
-                                className="flex items-center justify-center gap-2 mb-1 sm:mb-2"
-                            >
-                                <Pokeball className="w-7 h-7 sm:w-10 sm:h-10" />
-                                <h1 className="text-xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                                    Search Pokédex
-                                </h1>
-                            </motion.div>
-                            <motion.p
-                                className="text-slate-400 text-sm sm:text-base hidden sm:block"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.2 }}
-                            >
+                            <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
+                                <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                                    <Pokeball className="w-6 h-6 sm:w-10 sm:h-10" />
+                                    <h1 className="text-lg sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                                        Search Pokédex
+                                    </h1>
+                                </Link>
+                            </div>
+                            <p className="text-slate-400 text-sm sm:text-base hidden sm:block">
                                 Explore all {totalCount > 0 ? totalCount.toLocaleString() : "1000+"} Pokémon
-                            </motion.p>
+                            </p>
                         </div>
 
                         {/* Search Input */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="max-w-md mx-auto"
-                        >
+                        <div className="max-w-md mx-auto">
                             <SearchInput
                                 value={searchTerm}
                                 onChange={setSearchTerm}
@@ -319,7 +374,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                                         initial={{ opacity: 0, y: -10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: -10 }}
-                                        className="text-slate-400 text-sm mt-3 text-center"
+                                        className="text-slate-400 text-sm mt-2 sm:mt-3 text-center"
                                     >
                                         Found <span className="text-blue-400 font-medium">{displayedPokemons.length}</span> of <span className="text-purple-400">{totalCount}</span> Pokémon
                                         {debouncedSearch && <> matching &quot;{debouncedSearch}&quot;</>}
@@ -327,23 +382,18 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                                     </motion.p>
                                 )}
                             </AnimatePresence>
-                        </motion.div>
+                        </div>
 
                         {/* Filter Toggle Button */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.4 }}
-                            className="flex justify-center mt-4"
-                        >
+                        <div className="flex justify-center mt-3 sm:mt-4">
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 hover:bg-slate-700/50 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition-all text-sm"
+                                className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-slate-800/50 hover:bg-slate-700/50 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition-all text-xs sm:text-sm"
                             >
-                                <Filter className="w-4 h-4" />
+                                <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 {showFilters ? "Hide Filters" : "Show Filters"}
                             </button>
-                        </motion.div>
+                        </div>
 
                         {/* Type Filter Chips */}
                         <AnimatePresence>
@@ -353,7 +403,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                                     animate={{ opacity: 1, height: "auto" }}
                                     exit={{ opacity: 0, height: 0 }}
                                     transition={{ duration: 0.2 }}
-                                    className="mt-4 overflow-hidden"
+                                    className="mt-3 sm:mt-4 overflow-hidden"
                                 >
                                     <TypeFilterChips
                                         selectedType={selectedType}
@@ -366,14 +416,14 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                 </header>
 
                 {/* Main Content */}
-                <main className="px-6 py-8">
+                <main className="px-3 sm:px-6 py-4 sm:py-8">
                     <div className="max-w-6xl mx-auto">
                         {/* Top Searched Pokemon - Netflix Style */}
                         {isHomeState && !loading && displayedPokemons.length > 0 && popularSearches.length > 0 && (
                             <TopSearchedPokemon
                                 topSearches={popularSearches}
                                 allPokemons={displayedPokemons}
-                                className="mb-8"
+                                className="mb-6 sm:mb-8"
                             />
                         )}
 
@@ -400,7 +450,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                         {/* Pokemon Grid */}
                         {displayedPokemons.length > 0 && (
                             <>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
                                     {displayedPokemons.map((pokemon: Pokemon, index: number) => (
                                         <PokemonCard
                                             key={pokemon.id}
@@ -410,6 +460,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                                             index={index}
                                             number={pokemon.number}
                                             isNewCard={index >= previousCount}
+                                            onNavigate={() => saveScrollState(displayedPokemons.length)}
                                         />
                                     ))}
                                 </div>
@@ -458,7 +509,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                 </main>
 
                 {/* Footer */}
-                <footer className="py-8 mt-auto border-t border-white/5 bg-slate-950/50 backdrop-blur-sm">
+                <footer className="py-6 sm:py-8 mt-auto border-t border-white/5 bg-slate-950/50 backdrop-blur-sm">
                     <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-center items-center gap-4">
                         <div className="text-slate-400 text-sm">
                             <p>

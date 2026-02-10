@@ -236,7 +236,14 @@ export default function PokemonDetail() {
                 <header className="px-6 py-6 border-b border-white/10">
                     <div className="max-w-6xl mx-auto">
                         <button
-                            onClick={() => router.back()}
+                            onClick={() => {
+                                // If user came from within the app, go back; otherwise go home
+                                if (window.history.length > 1) {
+                                    router.back();
+                                } else {
+                                    router.push('/');
+                                }
+                            }}
                             className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-blue-600 text-white font-medium rounded-xl border border-white/20 hover:border-blue-500 shadow-lg hover:shadow-blue-500/25 transition-all group cursor-pointer"
                         >
                             <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />

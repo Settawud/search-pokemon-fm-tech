@@ -24,7 +24,7 @@ export function SearchInput({ value, onChange, placeholder = "Search...", classN
                 placeholder={placeholder}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full pl-12 pr-12 py-4 rounded-full bg-slate-900/80 backdrop-blur-xl border border-white/10 text-white placeholder-slate-500 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 text-lg shadow-lg shadow-blue-500/5 hover:border-white/20 hover:bg-slate-900"
+                className="w-full pl-11 pr-11 py-3 sm:py-4 rounded-full bg-slate-900/80 backdrop-blur-xl border border-white/10 text-white placeholder-slate-500 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-300 text-base sm:text-lg shadow-lg shadow-blue-500/5 hover:border-white/20 hover:bg-slate-900"
             />
 
             {/* Clear Button */}

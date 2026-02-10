@@ -12,23 +12,9 @@ interface PokemonCardProps {
     types: string[];
     index: number;
     number: string;
-    isNewCard?: boolean; // Controls if card should animate on mount
+    onNavigate?: (name: string) => void;
+    isNewCard?: boolean;
 }
-
-// Animation variants - only animate first batch, subsequent cards appear instantly
-const cardVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: (index: number) => ({
-        opacity: 1,
-        y: 0,
-        transition: {
-            // Only animate cards in the first visible batch (0-5)
-            // Cards loaded via infinite scroll appear instantly
-            delay: index < 6 ? index * 0.03 : 0,
-            duration: index < 6 ? 0.15 : 0,
-        }
-    }),
-};
 
 // Pokeball placeholder component for missing images
 function PokeballPlaceholder() {
@@ -43,28 +29,91 @@ function PokeballPlaceholder() {
     );
 }
 
-// Base64 blur placeholder for images
-const BLUR_DATA_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+// Skeleton placeholder shown while image is loading
+function CardSkeleton() {
+    return (
+        <div className="bg-slate-900/80 border-2 border-white/5 rounded-2xl p-4 text-center overflow-hidden animate-pulse">
+            {/* Number badge skeleton */}
+            <div className="flex justify-start mb-4">
+                <div className="w-12 h-5 bg-slate-800 rounded-lg" />
+            </div>
+            {/* Image skeleton */}
+            <div className="w-28 h-28 mx-auto mb-3 rounded-xl bg-slate-800/60" />
+            {/* Name skeleton */}
+            <div className="w-20 h-5 mx-auto mb-2 rounded bg-slate-800/60" />
+            {/* Type badges skeleton */}
+            <div className="flex justify-center gap-1.5">
+                <div className="w-14 h-6 rounded-full bg-slate-800/60" />
+                <div className="w-14 h-6 rounded-full bg-slate-800/60" />
+            </div>
+        </div>
+    );
+}
 
-export function PokemonCard({ name, image, types, index, number, isNewCard = true }: PokemonCardProps) {
-    const [imageError, setImageError] = useState(false);
+export function PokemonCard({ name, image, types, index, number, onNavigate, isNewCard = true }: PokemonCardProps) {
     const primaryType = types[0];
     const primaryColor = getTypeStyle(primaryType);
     const imageUrl = number ? getPokemonImage(number) : image;
 
+    // Check if image is already in browser cache to skip skeleton on back-navigation
+    const isImageCached = () => {
+        if (typeof window === 'undefined') return false;
+        const img = new window.Image();
+        img.src = imageUrl;
+        return img.complete && img.naturalWidth > 0;
+    };
+
+    const [imageError, setImageError] = useState(false);
+    const [imageLoaded, setImageLoaded] = useState(() => isImageCached());
+
+    const handleClick = () => {
+        if (onNavigate) {
+            onNavigate(name);
+        }
+    };
+
     const handleImageError = () => {
         setImageError(true);
+        setImageLoaded(true); // Show card with placeholder
     };
+
+    const handleImageLoad = () => {
+        setImageLoaded(true);
+    };
+
+    // Show skeleton while image is loading (only for new cards that haven't loaded yet)
+    if (!imageLoaded && !imageError) {
+        return (
+            <div className="transform-gpu backface-hidden">
+                {/* Hidden image to trigger loading */}
+                <div className="sr-only">
+                    <Image
+                        src={imageUrl}
+                        alt={name}
+                        width={112}
+                        height={112}
+                        onLoad={handleImageLoad}
+                        onError={handleImageError}
+                        loading={index < 8 ? "eager" : "lazy"}
+                    />
+                </div>
+                <CardSkeleton />
+            </div>
+        );
+    }
 
     return (
         <motion.div
-            custom={index}
-            initial={isNewCard ? "hidden" : false}
-            animate="visible"
-            variants={cardVariants}
-            className="transform-gpu backface-hidden" // Hardware acceleration hints
+            initial={isNewCard ? { opacity: 0 } : false}
+            animate={{ opacity: 1 }}
+            transition={{
+                duration: 0.25,
+                // Stagger only first batch for initial page load feel
+                delay: isNewCard && index < 6 ? index * 0.03 : 0,
+            }}
+            className="transform-gpu backface-hidden"
         >
-            <Link href={`/pokemon/${name.toLowerCase()}`}>
+            <Link href={`/pokemon/${name.toLowerCase()}`} onClick={handleClick}>
                 <div className="relative group cursor-pointer bg-slate-900/80 border-2 border-white/5 hover:border-blue-500/50 rounded-2xl p-4 text-center overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:bg-slate-800/80">
                     {/* Background Gradient on Hover */}
                     <div
@@ -76,7 +125,7 @@ export function PokemonCard({ name, image, types, index, number, isNewCard = tru
                         #{number}
                     </div>
 
-                    {/* Pokemon Image - Using Next.js Image for optimization */}
+                    {/* Pokemon Image */}
                     <div className="relative mb-3 mt-4">
                         {imageError ? (
                             <PokeballPlaceholder />
@@ -86,17 +135,15 @@ export function PokemonCard({ name, image, types, index, number, isNewCard = tru
                                     src={imageUrl}
                                     alt={name}
                                     fill
-                                    sizes="(max-width: 768px) 50vw, 33vw" // Correct sizes for grid
+                                    sizes="(max-width: 768px) 50vw, 33vw"
                                     className="object-contain"
                                     onError={handleImageError}
-                                    placeholder="blur"
-                                    blurDataURL={BLUR_DATA_URL}
-                                    loading={index < 8 ? "eager" : "lazy"} // Reduce eager loading count
+                                    loading={index < 8 ? "eager" : "lazy"}
                                 />
                             </div>
                         )}
 
-                        {/* Glow Shadow underneath on hover - simplified */}
+                        {/* Glow Shadow underneath on hover */}
                         <div
                             className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-4 ${primaryColor.solid} opacity-0 group-hover:opacity-20 blur-lg rounded-full transition-opacity duration-200`}
                         />
