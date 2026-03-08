@@ -1,15 +1,27 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useApolloClient } from "@apollo/client/react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { TrendingUp } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn, capitalize, getPokemonImage, formatPokemonNumber } from "../lib/utils";
+import { GET_ALL_POKEMONS } from "../lib/queries";
 
 interface SearchStat {
     query: string;
     count: number;
     lastSearched: number;
+}
+
+interface PokemonData {
+    id: string;
+    name: string;
+    image: string;
+    types: string[];
+    number: string;
+    searchCount: number;
 }
 
 interface TopSearchedPokemonProps {
@@ -38,24 +50,102 @@ const rankGradients = [
     "from-rose-400 via-rose-500 to-rose-700",        // #10
 ];
 
+interface PokeAPIPokemon {
+    id: number;
+    name: string;
+    pokemon_v2_pokemontypes: {
+        pokemon_v2_type: {
+            name: string;
+        };
+    }[];
+}
+
 export function TopSearchedPokemon({
     topSearches,
     allPokemons,
     className,
 }: TopSearchedPokemonProps) {
-    if (topSearches.length === 0) return null;
+    const apolloClient = useApolloClient();
+    const [resolvedPokemons, setResolvedPokemons] = useState<PokemonData[]>([]);
 
-    const topPokemonsWithData = topSearches
-        .map((stat) => {
-            const pokemon = allPokemons.find(
+    useEffect(() => {
+        if (topSearches.length === 0) return;
+
+        // First, try to match from allPokemons (already loaded)
+        const matched: PokemonData[] = [];
+        const unmatched: SearchStat[] = [];
+
+        for (const stat of topSearches.slice(0, 10)) {
+            const found = allPokemons.find(
                 (p) => p.name.toLowerCase() === stat.query.toLowerCase()
             );
-            return pokemon ? { ...pokemon, searchCount: stat.count } : null;
-        })
-        .filter(Boolean)
-        .slice(0, 10);
+            if (found) {
+                matched.push({ ...found, searchCount: stat.count });
+            } else {
+                unmatched.push(stat);
+            }
+        }
 
-    if (topPokemonsWithData.length === 0) return null;
+        if (unmatched.length === 0) {
+            // All found in displayed list — sort by original topSearches order
+            setResolvedPokemons(matched);
+            return;
+        }
+
+        // Fetch a larger set to find the missing Pokemon
+        const fetchMissing = async () => {
+            try {
+                const result = await apolloClient.query<{
+                    pokemon_v2_pokemon: PokeAPIPokemon[];
+                }>({
+                    query: GET_ALL_POKEMONS,
+                    variables: { limit: 300, offset: 0 },
+                    fetchPolicy: "cache-first",
+                });
+
+                const allFetched = result.data?.pokemon_v2_pokemon || [];
+                const fullMatched: PokemonData[] = [];
+
+                for (const stat of topSearches.slice(0, 10)) {
+                    // Check displayed list first
+                    const fromDisplayed = allPokemons.find(
+                        (p) => p.name.toLowerCase() === stat.query.toLowerCase()
+                    );
+                    if (fromDisplayed) {
+                        fullMatched.push({ ...fromDisplayed, searchCount: stat.count });
+                        continue;
+                    }
+
+                    // Check fetched list
+                    const fromFetched = allFetched.find(
+                        (p) => p.name.toLowerCase() === stat.query.toLowerCase()
+                    );
+                    if (fromFetched) {
+                        fullMatched.push({
+                            id: fromFetched.id.toString(),
+                            name: capitalize(fromFetched.name),
+                            image: getPokemonImage(formatPokemonNumber(fromFetched.id)),
+                            types: fromFetched.pokemon_v2_pokemontypes.map(
+                                (t) => capitalize(t.pokemon_v2_type.name)
+                            ),
+                            number: formatPokemonNumber(fromFetched.id),
+                            searchCount: stat.count,
+                        });
+                    }
+                }
+
+                setResolvedPokemons(fullMatched);
+            } catch (err) {
+                console.error("Error fetching Pokemon for trending:", err);
+                // Fallback to whatever we have
+                setResolvedPokemons(matched);
+            }
+        };
+
+        fetchMissing();
+    }, [topSearches, allPokemons, apolloClient]);
+
+    if (resolvedPokemons.length === 0) return null;
 
     return (
         <motion.div
@@ -78,9 +168,7 @@ export function TopSearchedPokemon({
             {/* Netflix-style Premium Cards */}
             <div className="relative">
                 <div className="flex gap-4 overflow-x-auto px-4 py-8 scrollbar-hide overflow-y-hidden">
-                    {topPokemonsWithData.map((pokemon, index) => {
-                        if (!pokemon) return null;
-
+                    {resolvedPokemons.map((pokemon, index) => {
                         return (
                             <motion.div
                                 key={pokemon.id}
