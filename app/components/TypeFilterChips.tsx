@@ -180,7 +180,8 @@ export function TypeFilterChips({
         if (type === "All") {
             onTypeChange(null);
         } else {
-            onTypeChange(selectedType === type ? null : type);
+            const lowerType = type.toLowerCase();
+            onTypeChange(selectedType === lowerType ? null : lowerType);
         }
     };
 
@@ -204,7 +205,7 @@ export function TypeFilterChips({
                     gap-2
                 ">
                     {POKEMON_TYPES.map((type, index) => {
-                        const isSelected = type === "All" ? !selectedType : selectedType === type;
+                        const isSelected = type === "All" ? !selectedType : selectedType === type.toLowerCase();
                         const colors = typeColors[type] || typeColors.Normal;
 
                         return (
