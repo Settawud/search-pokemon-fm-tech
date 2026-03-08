@@ -43,15 +43,21 @@ export function getPokemonImageFromSprites(sprites: string | null, pokemonId: nu
     if (sprites) {
         try {
             const parsed = JSON.parse(sprites);
-            // Try to get official artwork first, then fall back to front_default
-            return parsed?.other?.["official-artwork"]?.front_default
-                || parsed?.front_default
-                || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+            // Try to get official artwork first, then fall back to front_default sprite
+            const officialArtwork = parsed?.other?.["official-artwork"]?.front_default;
+            const frontDefault = parsed?.front_default;
+
+            if (officialArtwork) return officialArtwork;
+            if (frontDefault) return frontDefault;
         } catch {
-            // Fallback to official artwork URL
+            // Fallback below
         }
     }
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+    // Fallback: try official-artwork, then basic sprite
+    if (pokemonId <= 10000) {
+        return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
+    }
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`;
 }
 
 // Helper to extract types from PokeAPI format
