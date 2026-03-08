@@ -368,6 +368,13 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                                     onClick={() => {
                                         setSearchTerm("");
                                         setSelectedType(null);
+                                        setDisplayedPokemons(initialPokemons);
+                                        setTotalCount(initialTotalCount);
+                                        setPreviousCount(0);
+                                        offsetRef.current = initialPokemons.length;
+                                        setHasMore(initialPokemons.length < initialTotalCount);
+                                        clearScrollState();
+                                        router.replace("/", { scroll: false });
                                         window.scrollTo({ top: 0, behavior: "smooth" });
                                     }}
                                     className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
