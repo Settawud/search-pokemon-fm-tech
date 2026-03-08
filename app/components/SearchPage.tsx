@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { GET_ALL_POKEMONS, SEARCH_POKEMONS, GET_POKEMONS_BY_TYPE } from "../lib/queries";
+import { GET_ALL_POKEMONS, SEARCH_POKEMONS, GET_POKEMONS_BY_TYPE, GET_POKEMONS } from "../lib/queries";
 import { useDebounce } from "../hooks/useDebounce";
 import { useSearchStats } from "../hooks/useSearchStats";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
@@ -45,7 +45,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
     // Search & Filter States
     const [searchTerm, setSearchTerm] = useState(searchParams.get("name") || "");
     const [selectedType, setSelectedType] = useState<string | null>(
-        searchParams.get("type") || null
+        searchParams.get("type")?.toLowerCase() || null
     );
     const [showFilters, setShowFilters] = useState(false);
 
@@ -135,11 +135,13 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
     const [fetchAll, { loading: loadingAll }] = useLazyQuery<QueryData>(GET_ALL_POKEMONS);
     const [fetchSearch, { loading: loadingSearch }] = useLazyQuery<QueryData>(SEARCH_POKEMONS);
     const [fetchByType, { loading: loadingType }] = useLazyQuery<QueryData>(GET_POKEMONS_BY_TYPE);
+    const [fetchCombined, { loading: loadingCombined }] = useLazyQuery<QueryData>(GET_POKEMONS);
 
-    const loading = loadingAll || loadingSearch || loadingType;
+    const loading = loadingAll || loadingSearch || loadingType || loadingCombined;
 
     // Determine which query to use
     const queryMode = useMemo(() => {
+        if (debouncedSearch && selectedType) return "combined";
         if (debouncedSearch) return "search";
         if (selectedType) return "type";
         return "all";
@@ -154,7 +156,16 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
         try {
             let result;
 
-            if (queryMode === "search") {
+            if (queryMode === "combined") {
+                result = await fetchCombined({
+                    variables: {
+                        search: `%${debouncedSearch}%`,
+                        type: selectedType!,
+                        limit: ITEMS_PER_PAGE,
+                        offset
+                    }
+                });
+            } else if (queryMode === "search") {
                 result = await fetchSearch({
                     variables: {
                         search: `%${debouncedSearch}%`,
@@ -165,7 +176,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
             } else if (queryMode === "type") {
                 result = await fetchByType({
                     variables: {
-                        type: selectedType!.toLowerCase(),
+                        type: selectedType!,
                         limit: ITEMS_PER_PAGE,
                         offset
                     }
@@ -183,8 +194,10 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                 setTotalCount(count);
 
                 if (append) {
-                    setPreviousCount(prev => displayedPokemons.length);
-                    setDisplayedPokemons(prev => [...prev, ...newPokemons]);
+                    setDisplayedPokemons(prev => {
+                        setPreviousCount(prev.length);
+                        return [...prev, ...newPokemons];
+                    });
                 } else {
                     setPreviousCount(0);
                     setDisplayedPokemons(newPokemons);
@@ -197,7 +210,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
         } finally {
             setIsLoadingMore(false);
         }
-    }, [queryMode, debouncedSearch, selectedType, fetchAll, fetchSearch, fetchByType]);
+    }, [queryMode, debouncedSearch, selectedType, fetchAll, fetchSearch, fetchByType, fetchCombined]);
 
     // Reset and fetch when search/filter changes
     const isFirstRender = useRef(true);
@@ -208,8 +221,9 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
         if (isFirstRender.current) {
             isFirstRender.current = false;
 
+            // Only restore scroll for home state (no search, no filter)
             const savedState = getSavedState();
-            if (savedState && savedState.itemsCount > ITEMS_PER_PAGE) {
+            if (!debouncedSearch && !selectedType && savedState && savedState.itemsCount > ITEMS_PER_PAGE) {
                 const extraItems = savedState.itemsCount - initialPokemons.length;
                 if (extraItems > 0) {
                     const loadSavedItems = async () => {
@@ -236,6 +250,10 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                     };
                     loadSavedItems();
                 }
+            } else if (debouncedSearch || selectedType) {
+                // If URL has search/type params on first render, fetch with those params
+                offsetRef.current = 0;
+                fetchPokemons(0, false);
             }
 
             // Cleanup: reset for StrictMode remount
@@ -378,7 +396,7 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                                     >
                                         Found <span className="text-blue-400 font-medium">{displayedPokemons.length}</span> of <span className="text-purple-400">{totalCount}</span> Pokémon
                                         {debouncedSearch && <> matching &quot;{debouncedSearch}&quot;</>}
-                                        {selectedType && <> of type <span className="text-purple-400">{selectedType}</span></>}
+                                        {selectedType && <> of type <span className="text-purple-400">{capitalize(selectedType)}</span></>}
                                     </motion.p>
                                 )}
                             </AnimatePresence>
