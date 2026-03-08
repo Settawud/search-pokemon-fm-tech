@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense, useCallback, useRef, useMemo } from "rea
 import { useLazyQuery, useApolloClient } from "@apollo/client/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { GET_ALL_POKEMONS, SEARCH_POKEMONS, GET_POKEMONS_BY_TYPE, GET_POKEMONS } from "../lib/queries";
 import { useDebounce } from "../hooks/useDebounce";
@@ -365,12 +364,19 @@ export function SearchPage({ initialPokemons, initialTotalCount }: SearchPagePro
                         {/* Title */}
                         <div className="text-center mb-2 sm:mb-6">
                             <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-                                <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                                <button
+                                    onClick={() => {
+                                        setSearchTerm("");
+                                        setSelectedType(null);
+                                        window.scrollTo({ top: 0, behavior: "smooth" });
+                                    }}
+                                    className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+                                >
                                     <Pokeball className="w-6 h-6 sm:w-10 sm:h-10" />
                                     <h1 className="text-lg sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                                         Search Pokédex
                                     </h1>
-                                </Link>
+                                </button>
                             </div>
                             <p className="text-slate-400 text-sm sm:text-base hidden sm:block">
                                 Explore all {totalCount > 0 ? totalCount.toLocaleString() : "1000+"} Pokémon
